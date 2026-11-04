@@ -1,0 +1,156 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, user-scalable=no" />
+    <meta name="robots" content="noindex" />
+    <meta name="theme-color" content="#17181b" />
+    <meta name="mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+    <title>Parcade</title>
+    <link rel="icon" href="data:," />
+    <link rel="manifest" href="/manifest.webmanifest" />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link href="https://fonts.googleapis.com/css2?family=Tourney:ital,wght@1,700..900&family=Sora:wght@400;600;800&display=swap" rel="stylesheet" />
+    <link rel="stylesheet" href="/style.css" />
+  </head>
+  <body data-screen="">
+    <main id="stage">
+      <canvas id="game" width="960" height="540" aria-label="Game arena. Knock the other players off the platforms."></canvas>
+
+      <header id="hud">
+        <div id="plates"></div>
+        <div id="hud-right">
+          <span id="ping"></span>
+          <button class="round-key fullscreen-toggle" type="button" aria-label="Fullscreen">
+            <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 9V4h5M15 4h5v5M20 15v5h-5M9 20H4v-5" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round" /></svg>
+          </button>
+          <button id="menu-open" class="round-key" type="button" aria-label="Menu" aria-expanded="false">
+            <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 7h16M4 12h16M4 17h16" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" /></svg>
+          </button>
+        </div>
+      </header>
+
+      <div id="buffs"></div>
+      <div id="feed" aria-live="polite"></div>
+      <div id="banner" hidden></div>
+
+      <div id="stick" aria-hidden="true"><div id="knob"></div></div>
+      <div id="pad" aria-hidden="true">
+        <span data-key="JUMP" class="arrow up"></span>
+        <span data-key="LEFT" class="arrow left"></span>
+        <span data-key="RIGHT" class="arrow right"></span>
+        <span data-key="DOWN" class="arrow down"></span>
+      </div>
+      <button id="shoot" type="button" aria-label="Shoot">
+        <svg viewBox="0 0 48 48" aria-hidden="true"><circle cx="24" cy="24" r="15" fill="none" stroke="currentColor" stroke-width="4" /><path d="M24 3v12M24 33v12M3 24h12M33 24h12" stroke="currentColor" stroke-width="4" stroke-linecap="round" /></svg>
+      </button>
+      <button id="skill" type="button">
+        <span id="skill-sweep"></span>
+        <span id="skill-icon"></span>
+        <span id="skill-num"></span>
+        <span id="skill-name"></span>
+        <kbd>L</kbd>
+      </button>
+      <button id="dash" type="button" aria-label="Dash">
+        <span id="dash-sweep"></span>
+        <span id="dash-icon"></span>
+        <span id="dash-num"></span>
+        <kbd>K</kbd>
+      </button>
+    </main>
+
+    <div id="status" class="box" role="status" hidden></div>
+
+    <section id="menu" class="overlay" aria-label="Menu" hidden>
+      <div class="menu-panel box">
+        <h2 class="title menu-title">Menu</h2>
+        <div class="menu-room">
+          <span class="well room-chip">Room <b id="room-code"></b></span>
+          <button class="key key-small copy-link" type="button">Copy invite link</button>
+        </div>
+        <div class="menu-grid">
+          <button id="change-hero" class="key" type="button" hidden>Change hero</button>
+          <button id="mute" class="key" type="button"></button>
+          <button id="music" class="key" type="button"></button>
+          <button class="key controls-toggle" type="button"></button>
+          <button class="key fullscreen-toggle fullscreen-word" type="button">Fullscreen</button>
+        </div>
+        <p id="hint">Move: A / D or arrows. Jump (twice): W, Up or Space. Drop down: S or Down. Shoot: J or X. Dash: K or C. Skill: L or V.</p>
+        <div class="menu-actions">
+          <a class="key key-small" href="/">Leave room</a>
+          <button id="menu-close" class="key key-gold" type="button">Back to the fight</button>
+        </div>
+      </div>
+    </section>
+
+    <section id="pick" class="overlay" aria-label="Choose your hero">
+      <div class="pick-head">
+        <h1 class="title">Choose your hero</h1>
+        <span id="pick-clock" class="clock" hidden></span>
+      </div>
+      <div id="pick-tabs" class="well" role="tablist" aria-label="Choose a hero or a map">
+        <button id="tab-heroes" class="tab" type="button" role="tab">Heroes</button>
+        <button id="tab-map" class="tab" type="button" role="tab">Map: Random</button>
+      </div>
+      <div class="map-body">
+        <div id="map-cards"></div>
+        <p id="map-note"></p>
+      </div>
+      <div class="pick-body">
+        <div id="roster"></div>
+        <div id="detail" class="box">
+          <canvas id="detail-art"></canvas>
+          <div class="detail-words">
+            <h2 id="detail-name"></h2>
+            <p id="detail-skill"></p>
+            <p id="detail-text"></p>
+            <p id="detail-cd"></p>
+            <button id="lock" class="key key-gold" type="button"></button>
+          </div>
+        </div>
+      </div>
+      <div class="pick-foot">
+        <p id="pick-note"></p>
+        <span id="pick-room" class="well room-chip"></span>
+        <button class="key key-small copy-link" type="button">Copy invite link</button>
+        <button class="key key-small controls-toggle" type="button"></button>
+      </div>
+    </section>
+
+    <section id="results" class="overlay" aria-label="Round results" hidden>
+      <h2 id="results-title" class="title"></h2>
+      <div id="results-cards"></div>
+      <p id="results-next"></p>
+    </section>
+
+    <section id="home" class="overlay" aria-label="Start a game">
+      <h1 class="title logo">Parcade</h1>
+      <div class="home-panel box">
+        <p class="tagline">Knock everyone off the platforms. 16 heroes, 3 maps, up to 4 players, 3 lives each.</p>
+        <div class="home-row">
+          <button id="create" class="key key-gold key-big" type="button">Create room</button>
+        <form id="join">
+          <label for="join-code">Got a code?</label>
+          <span class="well join-well">
+            <input id="join-code" maxlength="5" autocomplete="off" autocapitalize="characters" spellcheck="false" placeholder="ROOM CODE" />
+          </span>
+          <button class="key" type="submit">Join</button>
+        </form>
+        </div>
+        <p id="join-error" role="alert"></p>
+      </div>
+    </section>
+
+    <section id="rotate" aria-label="Turn your phone sideways">
+      <div class="rotate-phone" aria-hidden="true"></div>
+      <h2 class="title rotate-title">Turn your phone sideways</h2>
+      <p>Parcade is played in landscape.</p>
+      <button class="key key-gold fullscreen-toggle fullscreen-word" type="button">Play fullscreen</button>
+    </section>
+
+    <script type="module" src="/client.js"></script>
+  </body>
+</html>

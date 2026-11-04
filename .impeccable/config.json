@@ -1,0 +1,44 @@
+{
+  "detector": {
+    "ignoreRules": [],
+    "ignoreFiles": [],
+    "ignoreValues": [
+      {
+        "rule": "border-accent-on-rounded",
+        "value": "*",
+        "files": [
+          "site/style.css"
+        ],
+        "createdAt": "2026-11-04T10:01:02.918Z",
+        "reason": "Claude's judgment, not user confirmed: .card-art's 3px var(--ink) line is a dark divider between card art and text, same ink as every edge, not a coloured accent"
+      },
+      {
+        "rule": "side-tab",
+        "value": "*",
+        "files": [
+          "site/style.css"
+        ],
+        "createdAt": "2026-11-04T10:01:03.253Z",
+        "reason": "Claude's judgment, not user confirmed: .card-art's phone-layout border-right is the same dark var(--ink) divider between art and text, not a coloured accent"
+      },
+      {
+        "rule": "radial-halo",
+        "value": "*",
+        "files": [
+          "site/index.html"
+        ],
+        "createdAt": "2026-11-04T11:17:34.820Z",
+        "reason": "Claude's judgment, not user confirmed: the coloured glows were removed; the radial gradients left are opaque button shading, the pick-clock ring cut-out, a neutral grey overlay and a faint joystick base, none a decorative halo"
+      },
+      {
+        "rule": "cramped-padding",
+        "value": "*",
+        "files": [
+          "site/index.html"
+        ],
+        "createdAt": "2026-11-04T14:04:32.500Z",
+        "reason": "Claude triage: flagged element is #pick-tabs.well, whose tab buttons carry their own padding, so text sits 10px inside the well on desktop as seen in the screenshots; the detector doesn't count the buttons' padding"
+      }
+    ]
+  }
+}

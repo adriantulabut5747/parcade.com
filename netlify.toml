@@ -1,0 +1,9 @@
+# Netlify publishes only the game page. The rooms server in worker/ deploys to Cloudflare separately: see worker/wrangler.toml.
+[build]
+  publish = "site"
+
+# Always check for a newer file, so players never get stuck on an old copy of the game.
+[[headers]]
+  for = "/*"
+  [headers.values]
+    Cache-Control = "public, max-age=0, must-revalidate"

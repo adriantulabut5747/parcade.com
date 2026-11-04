@@ -1,0 +1,9 @@
+{
+  "name": "Parcade",
+  "short_name": "Parcade",
+  "start_url": "/",
+  "display": "fullscreen",
+  "orientation": "landscape",
+  "background_color": "#17181b",
+  "theme_color": "#17181b"
+}
