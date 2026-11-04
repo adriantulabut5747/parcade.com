@@ -1,10 +1,10 @@
 // Browser side of the game: send keys, predict your own moves right away, then correct
 // them against the server. Other players are drawn slightly in the past so they move smoothly.
-import * as Art from '/art.js';
-import { isMusicOn, isMuted, play, setMusicOn, setMuted, setQuiet, setSong, unlockAudio } from '/audio.js';
-import * as Fx from '/fx.js';
-import { drawHero, setSpriteScale, stampHero } from '/heroes.js';
-import { BLIND_STEPS, BULWARK, DASH_CD, DECOY_STEPS, DID, DUSK, GUNS, GUN_SHIFT, HANDLER, HERO_COUNT, ILLUSIONIST, KEY, LIVES, MAPS, MOSSBACK, NINJA, PICK_STEPS, PISTOL, PLATFORMS, SHADE, SHIFTER, SKILL_CD, SNIPER, SNIPER_GUN, SPRINTER, STEPS_PER_SEC, W, addPlayer, movePlayer, newGame, padKeys, snapshotOf, startRound, step, stickKeys, useMap } from '/sim.js';
+import * as Art from './art.js';
+import { isMusicOn, isMuted, play, setMusicOn, setMuted, setQuiet, setSong, unlockAudio } from './audio.js';
+import * as Fx from './fx.js';
+import { drawHero, setSpriteScale, stampHero } from './heroes.js';
+import { BLIND_STEPS, BULWARK, DASH_CD, DECOY_STEPS, DID, DUSK, GUNS, GUN_SHIFT, HANDLER, HERO_COUNT, ILLUSIONIST, KEY, LIVES, MAPS, MOSSBACK, NINJA, PICK_STEPS, PISTOL, PLATFORMS, SHADE, SHIFTER, SKILL_CD, SNIPER, SNIPER_GUN, SPRINTER, STEPS_PER_SEC, W, addPlayer, movePlayer, newGame, padKeys, snapshotOf, startRound, step, stickKeys, useMap } from './sim.js';
 
 const SERVER = location.port === '8766' ? `ws://${location.hostname}:8787` : 'wss://parcade.adriantulabut5747.workers.dev';
 const STEP_MS = 1000 / STEPS_PER_SEC;

@@ -15,10 +15,11 @@ const IDLE_STEPS = STEPS_PER_SEC * 300;
 // Browsers send keys constantly, even a throttled background tab, so silence means a dead connection.
 const SILENT_STEPS = STEPS_PER_SEC * 10;
 
-// The live site and its Netlify preview links, plus this PC and phones on its network while testing.
+// The live sites and Netlify preview links, plus this PC and phones on its network while testing.
 function allowedOrigin(origin) {
   return (
     /^https:\/\/([a-z0-9-]+--)?parcades\.netlify\.app$/.test(origin) ||
+    origin === 'https://adriantulabut5747.github.io' ||
     /^http:\/\/(localhost|127\.0\.0\.1|192\.168\.\d+\.\d+|10\.\d+\.\d+\.\d+):8766$/.test(origin)
   );
 }

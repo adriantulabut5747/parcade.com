@@ -1,7 +1,7 @@
 // The three maps: each one's background, platforms and moving hazard. No game rules here.
 // The platforms never move; a wider screen only shows more of the world around them.
-import { H, MAPS, W } from '/sim.js';
-import { CREAM, GOLD, INK, outlined } from '/heroes.js';
+import { H, MAPS, W } from './sim.js';
+import { CREAM, GOLD, INK, outlined } from './heroes.js';
 
 export const LAVA_Y = 492;
 // Baked past the screen edge, so a camera shake never shows what's behind it.

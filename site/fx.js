@@ -1,8 +1,8 @@
 // Things flying through the arena and every skill and hit animation. No game rules here.
-import { ARC, DECOY_STEPS, DOG_HP, FLAME, H, ITEMS, LASER, MINIGUN, NET_STEPS, RIFLE, ROCKET, SHOTGUN, SHURIKEN, SNIPER_GUN, W, WALL_H, WALL_HP, WALL_STEPS, WALL_W } from '/sim.js';
-import { play } from '/audio.js';
-import { LAVA_Y } from '/art.js';
-import { CREAM, GOLD, INK, drawItemIcon, outlined, sprite, stamp, star } from '/heroes.js';
+import { ARC, DECOY_STEPS, DOG_HP, FLAME, H, ITEMS, LASER, MINIGUN, NET_STEPS, RIFLE, ROCKET, SHOTGUN, SHURIKEN, SNIPER_GUN, W, WALL_H, WALL_HP, WALL_STEPS, WALL_W } from './sim.js';
+import { play } from './audio.js';
+import { LAVA_Y } from './art.js';
+import { CREAM, GOLD, INK, drawItemIcon, outlined, sprite, stamp, star } from './heroes.js';
 
 const CALM = matchMedia('(prefers-reduced-motion: reduce)').matches;
 // The title screen's fight plays behind a menu, so it doesn't shake the screen.
