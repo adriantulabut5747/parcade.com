@@ -144,6 +144,9 @@ const SOUNDS = {
   ko: () => (tone(210, 36, 0.55, 'sawtooth', 0.3), noise(0.5, 0.6, 800)),
   fight: () => (tone(392, 392, 0.1, 'square', 0.2), tone(587, 587, 0.22, 'square', 0.2, 0.11)),
   win: () => [523, 659, 784, 1047].forEach((f, i) => tone(f, f, 0.2, 'square', 0.2, i * 0.13)),
+  // The boss's power crossing over: a long rise that resolves in `become` when it lands.
+  absorb: () => (tone(90, 720, 2.1, 'sawtooth', 0.14), tone(180, 1440, 2.1, 'sine', 0.2), noise(2.1, 0.12, 2400, 0, 'bandpass', 0.7)),
+  become: () => (tone(110, 40, 0.5, 'sine', 0.7), noise(0.35, 0.4, 1800), [262, 392, 523, 784].forEach((f) => tone(f, f, 0.9, 'triangle', 0.2, 0.02))),
   lose: () => [392, 330, 262].forEach((f, i) => tone(f, f * 0.97, 0.26, 'triangle', 0.4, i * 0.17)),
   pick: () => tone(660, 990, 0.1, 'square', 0.2),
   browse: () => tone(520, 620, 0.05, 'square', 0.1),
@@ -155,8 +158,26 @@ const SOUNDS = {
   dash: () => (noise(0.2, 0.4, 5200), tone(500, 1100, 0.14, 'sine', 0.2)),
   smokebomb: () => (noise(0.3, 0.6, 700), tone(220, 70, 0.2, 'sine', 0.35)),
   block: () => tone(1100, 540, 0.14, 'triangle', 0.4),
+  gust: () => noise(1, 0.26, 700, 0, 'bandpass', 0.8),
   hop: () => tone(330, 520, 0.07, 'sine', 0.1),
   hop2: () => (tone(520, 980, 0.1, 'sine', 0.16), tone(780, 1400, 0.08, 'triangle', 0.08, 0.03)),
+  // A rush of water going up, with bubbles on top.
+  water: () => (noise(0.55, 0.42, 1300, 0, 'bandpass', 0.5), tone(180, 620, 0.5, 'sine', 0.2), [0.08, 0.2, 0.34].forEach((d) => tone(500, 1300, 0.06, 'sine', 0.09, d))),
+  splash: () => (noise(0.09, 0.3, 2200, 0, 'bandpass', 0.8), tone(700, 1200, 0.05, 'sine', 0.08)),
+  // A big twin kicking over and revving, then falling back.
+  engine: () => (tone(46, 150, 0.32, 'sawtooth', 0.36), tone(92, 300, 0.32, 'square', 0.1), tone(150, 70, 0.34, 'sawtooth', 0.28, 0.3), noise(0.4, 0.12, 500)),
+  crash: () => (noise(0.12, 0.8, 2800, 0, 'bandpass', 0.6), tone(200, 40, 0.34, 'sawtooth', 0.46), noise(0.4, 0.35, 1400, 0.04), click(0.18, 0.3), click(0.27, 0.22)),
+  // Steel leaving the hand.
+  knife: () => (noise(0.16, 0.28, 3600, 0, 'bandpass', 1.6), tone(1800, 760, 0.16, 'triangle', 0.14)),
+  clank: () => (tone(2100, 1500, 0.09, 'triangle', 0.2), tone(3100, 2400, 0.06, 'sine', 0.1), noise(0.04, 0.2, 5000, 0, 'highpass')),
+  marked: () => (tone(1320, 1320, 0.1, 'triangle', 0.22), tone(1760, 1760, 0.16, 'triangle', 0.18, 0.07)),
+  blink: () => (tone(1500, 240, 0.12, 'sine', 0.3), noise(0.1, 0.3, 4200, 0, 'bandpass', 1), tone(220, 70, 0.2, 'sawtooth', 0.26, 0.1)),
+  // Air being dragged inward: rising, then swallowed.
+  vortex: () => (noise(0.7, 0.42, 620, 0, 'bandpass', 1.1), tone(60, 240, 0.6, 'sine', 0.42), tone(1200, 200, 0.6, 'sine', 0.1)),
+  paper: () => noise(0.05, 0.32, 3400, 0, 'bandpass', 1.8),
+  tear: () => (noise(0.2, 0.42, 3000, 0, 'bandpass', 1.2), noise(0.08, 0.3, 4400, 0.1, 'bandpass', 2)),
+  // Wood sliding in a groove, and shutting.
+  door: () => (noise(0.14, 0.26, 900, 0, 'bandpass', 2), tone(170, 110, 0.08, 'triangle', 0.3, 0.13)),
   bark: () => (tone(520, 240, 0.09, 'sawtooth', 0.3), tone(430, 210, 0.1, 'sawtooth', 0.28, 0.12)),
   rumble: () => (tone(90, 38, 0.35, 'sine', 0.6), noise(0.3, 0.35, 500)),
   pickup: () => [660, 880].forEach((f, i) => tone(f, f, 0.08, 'square', 0.2, i * 0.07)),

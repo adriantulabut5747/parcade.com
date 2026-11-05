@@ -3,10 +3,12 @@
 import * as Art from './art.js';
 import { isMusicOn, isMuted, play, setMusicOn, setMuted, setQuiet, setSong, unlockAudio } from './audio.js';
 import { LEVELS } from './bot.js';
+import { HOLLOW, ROSTER, STOPS, canPlay, createFight, createRoad, finishStop, loadSave, storeSave } from './campaign.js';
 import * as Fx from './fx.js';
 import { drawHero, setSpriteScale, stampHero } from './heroes.js';
 import { createPractice, isLevel } from './practice.js';
-import { BLIND_STEPS, BULWARK, DASH_CD, DECOY_STEPS, DID, DUSK, GUNS, GUN_SHIFT, HANDLER, HERO_COUNT, ILLUSIONIST, KEY, LIVES, MAPS, MOSSBACK, NINJA, PICK_STEPS, PISTOL, PLATFORMS, SHADE, SHIFTER, SKILL_CD, SNIPER, SNIPER_GUN, SPRINTER, STEPS_PER_SEC, W, addPlayer, movePlayer, newGame, padKeys, snapshotOf, startRound, step, stickKeys, useMap } from './sim.js';
+import { createTrail } from './trail.js';
+import { BIKE_STEPS, BLIND_STEPS, AQUILLES, CASSIO, DASH_CD, DECOY_STEPS, DEXTAR, DID, DUSK, GUNS, GUN_SHIFT, HANDLER, HERO_COUNT, ILLUSIONIST, KEY, ALL_KEYS, LIVES, MAPS, MARK_STEPS, MOSSBACK, NINJA, PICK_STEPS, PISTOL, PLATFORMS, SEEDEA, SHADE, SHIFTER, SKILL_CD, SNIPER, SNIPER_GUN, SPRINTER, STEPS_PER_SEC, W, addPlayer, movePlayer, newGame, inFall, padKeys, snapshotOf, startRound, step, stickKeys, useMap, usePlatforms } from './sim.js';
 
 const SERVER = location.port === '8766' ? `ws://${location.hostname}:8787` : 'wss://parcade.adriantulabut5747.workers.dev';
 const STEP_MS = 1000 / STEPS_PER_SEC;
@@ -33,7 +35,7 @@ const KEYS = {
   KeyV: KEY.SKILL,
 };
 
-// Icons and text are in hero order: Sniper, Trapper, Ninja, Sprinter, Shifter, Santa, Dusk, Bulwark, Illusionist, Poacher, Angler, Handler, Mossback, Rime, Tether, Shade.
+// Icons and text are in hero order: Sniper, Trapper, Ninja, Sprinter, Shifter, Santa, Dusk, Aquilles, Illusionist, Poacher, Angler, Handler, Mossback, Rime, Tether, Shade, Seedea, Cassio, Dextar, VI.
 const svg = (inner) => `<svg viewBox="0 0 48 48" aria-hidden="true">${inner}</svg>`;
 const ICONS = [
   svg('<circle cx="24" cy="24" r="15" fill="none" stroke="currentColor" stroke-width="5"/><path d="M24 3v13M24 32v13M3 24h13M32 24h13" stroke="currentColor" stroke-width="5" stroke-linecap="round"/><circle cx="24" cy="24" r="3.5" fill="currentColor"/>'),
@@ -43,7 +45,7 @@ const ICONS = [
   svg('<path d="M15 6h18l-9 11ZM15 42h18l-9-11Z" fill="currentColor"/><circle cx="24" cy="24" r="5" fill="currentColor"/>'),
   svg('<path d="M7 19h34v24H7ZM21 19h6v24h-6ZM5 13h38v7H5Z" fill="currentColor"/><path d="M24 13C17 3 9 4 11 10c1 3 8 3 13 3 5 0 12 0 13-3 2-6-6-7-13 3Z" fill="none" stroke="currentColor" stroke-width="3.5"/>'),
   svg('<path d="M36 5A20 20 0 1 0 43 34 16 16 0 0 1 36 5Z" fill="currentColor"/>'),
-  svg('<path d="M7 7h34v18L24 44 7 25Z" fill="currentColor"/>'),
+  svg('<circle cx="24" cy="24" r="19" fill="none" stroke="currentColor" stroke-width="5"/><circle cx="24" cy="24" r="9" fill="currentColor"/><path d="M41 5 7 43" stroke="currentColor" stroke-width="3" stroke-linecap="round"/><path d="M45 2 35 7l6 6Z" fill="currentColor"/>'),
   svg('<circle cx="24" cy="15" r="9" fill="currentColor"/><path d="M12 44c0-13 5-17 12-17s12 4 12 17Z" fill="currentColor"/><circle cx="7" cy="23" r="5" fill="currentColor" opacity=".55"/><path d="M0 44c0-9 2-13 7-13 3 0 5 1 6 3-2 3-3 6-3 10Z" fill="currentColor" opacity=".55"/><circle cx="41" cy="23" r="5" fill="currentColor" opacity=".55"/><path d="M48 44c0-9-2-13-7-13-3 0-5 1-6 3 2 3 3 6 3 10Z" fill="currentColor" opacity=".55"/>'),
   svg('<path d="M4 34h40v7H4ZM6 34V14l6 9 6-11 6 11 6-11 6 11 6-9v20Z" fill="currentColor"/>'),
   svg('<path d="M28 3v21a10 10 0 1 1-18-6" fill="none" stroke="currentColor" stroke-width="6" stroke-linecap="round"/><path d="M4 26 10 12l8 11Z" fill="currentColor"/><circle cx="28" cy="6" r="4.5" fill="currentColor"/>'),
@@ -52,28 +54,39 @@ const ICONS = [
   svg('<path d="M24 3v42M5 13.5l38 21M43 13.5l-38 21M24 12l-6-6M24 12l6-6M24 36l-6 6M24 36l6 6" fill="none" stroke="currentColor" stroke-width="4.5" stroke-linecap="round"/>'),
   svg('<ellipse cx="24" cy="27" rx="7" ry="9" fill="currentColor"/><circle cx="24" cy="14" r="5" fill="currentColor"/><path d="M18 21 9 12 4 15M17 26H7l-4 5M18 32l-8 7-1 6M30 21l9-9 5 3M31 26h10l4 5M30 32l8 7 1 6" fill="none" stroke="currentColor" stroke-width="3.5" stroke-linecap="round" stroke-linejoin="round"/>'),
   svg('<path d="M4 25c6-9 13-13 20-13s14 4 20 13c-6 8-13 12-20 12S10 33 4 25Z" fill="none" stroke="currentColor" stroke-width="4.5" stroke-linejoin="round"/><circle cx="24" cy="25" r="6" fill="currentColor"/><path d="M8 43 40 7" fill="none" stroke="currentColor" stroke-width="5" stroke-linecap="round"/>'),
+  svg('<path d="M15 45V19c0-9 4-15 9-15s9 6 9 15v26Z" fill="currentColor"/><path d="M6 45c0-8 1-11 1-18M42 45c0-8-1-11-1-18" fill="none" stroke="currentColor" stroke-width="4" stroke-linecap="round"/><circle cx="24" cy="31" r="4" fill="#160a2a"/><circle cx="24" cy="18" r="3" fill="#160a2a"/>'),
+  svg('<circle cx="9" cy="34" r="7" fill="none" stroke="currentColor" stroke-width="4.5"/><circle cx="39" cy="34" r="7" fill="none" stroke="currentColor" stroke-width="4.5"/><path d="M9 34h17l6-15M32 19h8M26 34l-6-11h-9" fill="none" stroke="currentColor" stroke-width="4.5" stroke-linejoin="round" stroke-linecap="round"/><path d="M34 19l5 15" stroke="currentColor" stroke-width="4" stroke-linecap="round"/>'),
+  svg('<path d="M45 3 18 17l13 13Z" fill="currentColor"/><path d="M14 18l16 16M18 29 8 39" fill="none" stroke="currentColor" stroke-width="5" stroke-linecap="round"/><circle cx="6" cy="42" r="4" fill="currentColor"/>'),
+  svg('<path d="M24 24c0-4 5-4 5 0s-9 6-11 0 5-13 13-10 9 15 2 21-20 4-23-8 8-22 21-20" fill="none" stroke="currentColor" stroke-width="4.5" stroke-linecap="round"/>'),
 ];
 const DASH_ICON = svg('<path d="M4 17h24a6 6 0 1 0-6-6M4 26h34a6 6 0 1 1-6 6M4 35h16a5 5 0 1 1-5 5" fill="none" stroke="currentColor" stroke-width="4.5" stroke-linecap="round"/>');
 const HEROES = [
   { name: 'Sniper', skill: 'Long Shot', cd: '25 s cooldown', text: 'Equip a rifle with 5 heavy bullets. Each one shoves enemies twice as far and kicks you back hard. You fade almost out of sight for up to 13 seconds while you hold it.' },
-  { name: 'Trapper', skill: 'Snare Net', cd: '15 s cooldown', text: 'Throw a long-range net. The first enemy it catches can’t run or jump for 1 second, but can still be pushed.' },
+  { name: 'Ken', title: 'the Trapper', tone: 'trapper', skill: 'Snare Net', cd: '15 s cooldown', text: 'Throw a long-range net. The first enemy it catches can’t run or jump for 1 second, but can still be pushed.' },
   { name: 'Ninja', skill: 'Smoke Step', cd: '20 s after the log is gone', text: 'Leave a log in a puff of smoke, then press again within 7 seconds to swap back to it. That breaks a net and arms you with 3 big shurikens that are easy to land and hit hard.' },
   { name: 'Sprinter', skill: 'Overdrive', cd: '25 s cooldown', text: 'Run half as fast again for 6 seconds and draw an arc gun with 5 shots that hits harder than your pistol and reaches right across the map.' },
   { name: 'Shifter', skill: 'Shrink', cd: '20 s cooldown', text: 'Shrink and run a little faster for 5 seconds. Bullets fired from your own floor fly right over your head.' },
   { name: 'Santa', skill: 'Gift Bomb', cd: '15 s cooldown', text: 'Toss a gift just in front of you. After 1.1 seconds it bursts with a huge sideways shove on every enemy in a wide circle.' },
   { name: 'Dusk', skill: 'Ink Tide', cd: '25 s cooldown', text: 'Send a tall wave of ink across the arena. Enemies it touches are slowed and can barely see for 3 seconds. Landing it turns you into a fast shadow for 3 seconds.' },
-  { name: 'Bulwark', skill: 'Iron Guard', cd: '20 s cooldown', text: 'Raise your shield for 4 seconds. Bullets, blasts, nets and hooks all stop, and anyone who touches you gets shoved away.' },
+  { name: 'Aquilles', skill: 'Bronze Guard', cd: '20 s cooldown', text: 'Raise your great shield for 4 seconds and swing your spear forward as a gun. Bullets, blasts, nets and hooks all stop, and anyone who touches you gets shoved away.' },
   { name: 'Illusionist', skill: 'Double Trouble', cd: '20 s cooldown', text: 'Summon 2 copies of yourself that run around and fire weak shots for 5 seconds. One hit from anything and a copy vanishes.' },
-  { name: 'Poacher', skill: 'Bear Trap', cd: '15 s cooldown', text: 'Toss a wide trap onto a platform. The first enemy near it is held still for 0.8 seconds, then slowed for 1 more. Up to 3 stay out, each for 70 seconds.' },
+  { name: 'Ethan', title: 'the Poacher', tone: 'poacher', skill: 'Bear Trap', cd: '15 s cooldown', text: 'Toss a wide trap onto a platform. The first enemy near it is held still for 0.8 seconds, then slowed for 1 more. Up to 3 stay out, each for 70 seconds.' },
   { name: 'Angler', skill: 'Reel In', cd: '20 s cooldown', text: 'Cast a fast hook right across the map. It drags the first enemy to just behind you and stuns them for 0.8 seconds. Deadly at a ledge.' },
   { name: 'Handler', skill: 'Good Dog', cd: '25 s cooldown', text: 'Send your dog at the nearest enemy for 15 seconds. It shoves them every 1.5 seconds, and 5 shots bring it down.' },
   { name: 'Mossback', skill: 'Earth Wall', cd: '15 s cooldown', text: 'Raise a wall of earth for 10 seconds. It stops players and bullets, you can stand on it, and it takes 10 shots. Blasts still go through.' },
   { name: 'Rime', skill: 'Whiteout', cd: '25 s cooldown', text: 'Send a slow blizzard rolling forward for 4 seconds. Anyone it reaches is thrown back and slowed to a crawl, again and again, while you keep fighting.' },
   { name: 'Tether', skill: 'Zip Line', cd: '20 s cooldown', text: 'Shoot a web at the nearest enemy, wherever they are, and zip straight to them. They are webbed and slowed for 1 second when you land.' },
   { name: 'Shade', skill: 'Vanish', cd: '25 s cooldown', text: 'Drop a smoke cloud and turn invisible for 6 seconds. Firing shows you again, but that one shot hits as hard as a sniper bullet.' },
+  { name: 'Seedea', skill: 'Rising Tide', cd: '20 s cooldown', text: 'Raise a waterfall from floor to sky for 7 seconds. No bullet gets through it, not even yours. Anyone who goes near it is carried up in a bubble and thrown out of the top.' },
+  { name: 'Cassio', skill: 'Road King', cd: '25 s cooldown', text: 'Summon your motorcycle and ride almost twice as fast for 8 seconds. Press again to hurl it sideways: whoever it hits is stunned for 1.5 seconds, then slowed for 1 more.' },
+  { name: 'Dextar', skill: 'Marked Blade', cd: '20 s cooldown', text: 'Throw a huge knife that crosses nearly the whole map and marks the first enemy it hits. Press again within 5 seconds to appear behind them and stun them for 1.5 seconds.' },
+  { name: 'VI', skill: 'Mind Vortex', cd: '20 s cooldown', text: 'Throw a grenade. When it hits a floor it opens a huge vortex that drags every enemy nearby into the middle and slows them for 2 seconds. A dash can break free.' },
 ];
-const MAP_CARDS = [null, 0, 1, 2];
-const MAP_BLURB = ['Lava under a black iron forge', 'A huge forest and a poison swamp', 'A golden temple and quicksand'];
+// A hero's name is who they are; their title is what they do. A hero Adrian hasn't named yet has only the one word, and the CSS tones stay keyed to the old word.
+const toneOf = (hero) => hero.tone ?? hero.name.toLowerCase();
+for (const h of HEROES) h.full = h.title ? `${h.name} ${h.title}` : h.name;
+const MAP_CARDS = [null, 0, 1, 2, 3, 4];
+const MAP_BLURB = ['Lava under a black iron forge', 'A huge forest and a poison swamp', 'A golden temple and quicksand', 'VI’s home: floating islands over the void', 'Paper screens, secret doors, moonlit water'];
 const gunFor = (hero) => (hero === SNIPER ? SNIPER_GUN : PISTOL);
 
 const $ = (id) => document.getElementById(id);
@@ -89,14 +102,20 @@ const upright = matchMedia('(pointer: coarse) and (orientation: portrait)');
 const room = (params.get('room') || '').toUpperCase();
 const hasRoom = /^[A-Z2-9]{5}$/.test(room);
 const botCount = Number(params.get('bots'));
-const practice = !hasRoom && [1, 2, 3].includes(botCount) && isLevel(params.get('level')) ? { bots: botCount, level: params.get('level') } : null;
-const inGame = hasRoom || !!practice;
+let practice = !hasRoom && [1, 2, 3].includes(botCount) && isLevel(params.get('level')) ? { bots: botCount, level: params.get('level') } : null;
+const campaignPage = !hasRoom && !practice && params.has('campaign');
+let inGame = hasRoom || !!practice;
+// The campaign stop being played, if any. Stops run inside this page, so a phone stays fullscreen from one to the next.
+let run = null;
+let trail = null;
+let save = loadSave();
 // Online, other players are drawn in the past to hide the connection. Practice has no connection to hide, so what you see is what can hit you.
-const viewDelay = practice ? STEP_MS * 1.5 : VIEW_DELAY_MS;
+const viewDelay = practice || campaignPage ? STEP_MS * 1.5 : VIEW_DELAY_MS;
 
 const held = new Set();
 const lastThrow = new Map();
 const wasNetted = new Map();
+const wasMounted = new Map();
 const tileArt = [];
 const detailArt = $('detail-art').getContext('2d');
 const view = { l: 0, t: 0, w: W, h: ARENA_H };
@@ -211,13 +230,18 @@ function syncMap(map) {
   if (map === currentMap) return;
   currentMap = map;
   useMap(map);
+  if (run?.road) usePlatforms(run.road.platforms);
   Art.setArtMap(map);
   Fx.setFxMap(map);
-  arena = Art.bakeArena(view, quality, map);
+  arena = bakeWorld();
 }
 
+const bakeWorld = () => (run?.road ? Art.bakeRoad(view, quality, run.road) : Art.bakeArena(view, quality, currentMap));
+
 function nameOf(id) {
-  return id === myId ? 'YOU' : `P${id + 1}`;
+  if (id === myId) return 'YOU';
+  if (run?.road) return run.road.foes[id - 1].kind.toUpperCase();
+  return run ? HEROES[run.stop.hero].name.toUpperCase() : `P${id + 1}`;
 }
 
 function addFeed(f, s) {
@@ -325,9 +349,10 @@ function onSnapshot(s) {
 
   const server = s.p.find((p) => p.id === myId);
   if (!server) return;
+  if (run) onCamp(s.camp, server);
   const old = me;
   me = { ...server };
-  if (!s.o && !s.pk && me.lives > 0 && me.hero !== null) for (const i of pending) movePlayer(me, i.b, s.wl);
+  if (!s.o && !s.pk && me.lives > 0 && me.hero !== null) for (const i of pending) movePlayer(me, i.b, s.wl, s.fl);
   // Hide small corrections by easing into them; a respawn should just jump.
   if (old) {
     const dx = old.x - me.x;
@@ -356,7 +381,7 @@ function predictStep() {
   const last = snaps[snaps.length - 1];
   if (me && last && !last.o && !last.pk && me.lives > 0 && me.hero !== null) {
     myPrev = { x: me.x, y: me.y };
-    const did = movePlayer(me, keys, last.wl);
+    const did = movePlayer(me, keys, last.wl, last.fl);
     if (did & DID.SHOT) {
       flashGun = did >> GUN_SHIFT;
       flash = GUNS[flashGun].cool > 12 ? 5 : 3;
@@ -372,7 +397,7 @@ function predictStep() {
 function runSteps() {
   const now = performance.now();
   // Practice runs on this device, so it can wait for you: the menu or another app pauses it.
-  if (practice && (document.hidden || !$('menu').hidden)) {
+  if (practice && (document.hidden || !$('menu').hidden || !$('stop-end').hidden)) {
     lastTime = now;
     stepClock = 0;
     clockOffset = null;
@@ -432,8 +457,11 @@ function skillShowing(p, snap) {
   if (p.hero === DUSK) return p.gh > 0;
   if (p.hero === SPRINTER) return p.sp > 0;
   if (p.hero === SHIFTER) return p.sm > 0;
-  if (p.hero === BULWARK) return p.gd > 0;
+  if (p.hero === AQUILLES) return p.gd > 0;
   if (p.hero === SHADE) return p.iv > 0;
+  if (p.hero === SEEDEA) return snap.fl.some((f) => f.o === p.id);
+  if (p.hero === CASSIO) return p.bk > 0;
+  if (p.hero === DEXTAR) return p.mr > 0;
   if (p.hero === ILLUSIONIST) return snap.cl.some((c) => c.o === p.id);
   if (p.hero === HANDLER) return snap.dg.some((d) => d.o === p.id);
   if (p.hero === MOSSBACK) return snap.wl.some((w) => w.o === p.id);
@@ -446,6 +474,8 @@ function heroFrame(p, x, y, now, snap) {
   const thrown = lastThrow.get(p.id);
   if (p.sp > 0) Fx.speedTrail(x, y, p.vx, '#ffd92e');
   if (p.gh > 0) Fx.speedTrail(x, y, p.vx, '#7fe0ff');
+  if (p.bk > 0) Fx.speedTrail(x, y + 26, p.vx, '#c6ccd6');
+  if (snap.fl.length && inFall(snap.fl, x) && !p.g) Fx.drawRideBubble(ctx, x, y, now);
   // One reused object: this runs for every hero on every frame.
   const o = heroLook;
   o.hero = p.hero;
@@ -472,13 +502,17 @@ function heroFrame(p, x, y, now, snap) {
   o.flash = isMe ? flash : 0;
   o.flashGun = flashGun;
   o.throwing = thrown ? Math.max(0, 1 - (now - thrown) / 260) : 0;
-  o.label = isMe ? 'YOU' : `P${p.id + 1}`;
+  o.label = nameOf(p.id);
   o.isMe = isMe;
   stampHero(ctx, o);
   if (p.n > 0) Fx.drawSnare(ctx, x, y, p.n, now);
   if (p.tr > 0) Fx.drawClamp(ctx, x, y);
   if (p.fz > 0) Fx.drawFrost(ctx, x, y);
   if (p.hk > 0) Fx.drawStun(ctx, x, y, now);
+  if (p.ss > 0) Fx.drawSoftSlow(ctx, x, y);
+  for (const o of snap.p) if (o.mk === p.id && o.mr > 0) Fx.drawMark(ctx, x, y, now, o.mr);
+  if (wasMounted.get(p.id) && !p.bk) Fx.trigger({ k: 'land', x, y: y - 18, f: p.f });
+  wasMounted.set(p.id, p.bk > 0);
   if (wasNetted.get(p.id) && !p.n) Fx.snapNet(x, y);
   wasNetted.set(p.id, p.n > 0);
   markOffscreen(p, x, y);
@@ -509,6 +543,8 @@ function cloneFrame(c, x, y, now) {
 
 // Someone flung past the top or the sides still has an arrow on the screen's edge.
 function markOffscreen(p, x, y) {
+  // A road's guards wait up ahead; only you need finding.
+  if (run?.road && p.id !== myId) return;
   const left = view.l + 16;
   const right = view.l + view.w - 16;
   const top = view.t + 14;
@@ -566,7 +602,10 @@ function drawMatch(now) {
   }
   if (b.pk) return;
 
+  if (b.camp?.deathSteps) Fx.drawBody(ctx, b.camp, Math.max(0, b.camp.t - 1 + mix), Fx.positionOf(myId), now);
   for (const c of b.c) Fx.drawCrate(ctx, c, now);
+  for (const f of b.fl) Fx.drawFall(ctx, f, view.t - Art.SHAKE_ROOM, now);
+  Art.drawScreens(ctx, currentMap, b.sn);
   for (const w of b.wl) Fx.drawWall(ctx, w, w.x, w.y, now);
   for (const nb of b.tp) {
     const na = a.tp.find((old) => old.id === nb.id) || nb;
@@ -587,6 +626,10 @@ function drawMatch(now) {
   for (const nb of b.gr) {
     const na = a.gr.find((old) => old.id === nb.id) || nb;
     Fx.drawGift(ctx, nb, between(na.x, nb.x, mix), between(na.y, nb.y, mix), now);
+  }
+  for (const nb of b.vg) {
+    const na = a.vg.find((old) => old.id === nb.id) || nb;
+    Fx.drawVac(ctx, nb, between(na.x, nb.x, mix), between(na.y, nb.y, mix), now);
   }
   for (const nb of b.dg) {
     const na = a.dg.find((old) => old.id === nb.id) || nb;
@@ -622,18 +665,66 @@ function drawMatch(now) {
     const na = a.v.find((old) => old.id === nb.id);
     Fx.drawWave(ctx, nb, na ? between(na.x, nb.x, mix) : nb.x, now);
   }
+  for (const nb of b.bi) {
+    const na = a.bi.find((old) => old.id === nb.id) || nb;
+    Fx.drawThrownBike(ctx, nb, between(na.x, nb.x, mix), nb.y, now);
+  }
+  for (const nb of b.kn) {
+    const na = a.kn.find((old) => old.id === nb.id) || nb;
+    Fx.drawFlyingKnife(ctx, nb, between(na.x, nb.x, mix), nb.y);
+  }
   for (const r of b.r) Fx.drawRock(ctx, r);
   Fx.drawEffects(ctx, now);
 }
 
+const ROAD_TRAP = { t: 999, g: false };
+// A line stays up this long. The next one waits at least this long, or less from the same speaker, so a two-part line lands while they're still on screen.
+const LINE_MS = 4200;
+const LINE_GAP_MS = 2400;
+const SAME_SPEAKER_MS = 1500;
+
+function drawRoadWorld(road, now) {
+  const last = snaps[snaps.length - 1];
+  if (arena) Art.drawRoadBack(ctx, arena, view, road);
+  Art.drawRoad(ctx, road, view, last?.camp, last?.k ?? 0, Math.min(1, stepClock / STEP_MS), now);
+  for (const c of road.traps) if (c.x > view.l - 60 && c.x < view.l + view.w + 60) Fx.drawTrap(ctx, ROAD_TRAP, c.x, c.y, false, now);
+}
+
+// Lines show once each as you reach them, in order. Replaying a road tells them again.
+function drawStory(road, now) {
+  const next = road.story[run.said];
+  if (next && me && me.x >= next.x && (!run.line || now - run.lineAt > (next.who === run.line.who ? SAME_SPEAKER_MS : LINE_GAP_MS))) {
+    run.line = next;
+    run.lineAt = now;
+    run.said++;
+  }
+  if (!run.line) return;
+  const age = now - run.lineAt;
+  if (age > LINE_MS) {
+    run.line = null;
+    return;
+  }
+  // No speaker named means it's you, so it follows you along the road.
+  const [x, y] = run.line.at ? [run.line.at.x, run.line.at.y] : me ? [ownPosition(Math.min(1, stepClock / STEP_MS))[0], me.y - 74] : [0, 0];
+  Art.drawBubble(ctx, run.line.text, run.line.who ?? 'You', x, y, view, Math.min(1, age / 120, (LINE_MS - age) / 240));
+}
+
 function drawWorld(now) {
+  const road = run?.road;
+  if (road && me) {
+    // The camera eases along behind you, and jumps straight back after a fall.
+    const want = Art.roadCamera(road, me.x + errX, view);
+    view.l = Math.abs(want - view.l) > 300 ? want : view.l + (want - view.l) * 0.18;
+  }
   const [sx, sy] = Fx.takeShake();
   const q = quality;
   ctx.setTransform(q, 0, 0, q, (sx - view.l) * q, (sy - view.t) * q);
-  if (arena) ctx.drawImage(arena, view.l - Art.SHAKE_ROOM, view.t - Art.SHAKE_ROOM, view.w + Art.SHAKE_ROOM * 2, view.h + Art.SHAKE_ROOM * 2);
+  if (road) drawRoadWorld(road, now);
+  else if (arena) ctx.drawImage(arena, view.l - Art.SHAKE_ROOM, view.t - Art.SHAKE_ROOM, view.w + Art.SHAKE_ROOM * 2, view.h + Art.SHAKE_ROOM * 2);
   Art.drawLavaBack(ctx, view, now);
   if (snaps.length) drawMatch(now);
   Art.drawLavaFront(ctx, view, now);
+  if (road && screen === 'play') drawStory(road, now);
   // Blindness comes last, so nothing shows through it. Only the blinded player's screen is dark.
   if (me && me.bl > 0 && me.lives > 0 && screen === 'play') {
     const at = Fx.positionOf(myId);
@@ -648,9 +739,10 @@ function frame(now) {
   const gap = now - lastFrame;
   lastFrame = now;
   if (inGame) runSteps();
-  else runAttract(now);
+  else if (!campaignPage) runAttract(now);
   updateScreen();
-  if (upright.matches) return;
+  // The map covers everything, so nothing is drawn under it.
+  if (upright.matches || screen === 'map') return;
   if (screen === 'play') {
     drawWorld(now);
     watchSpeed(gap);
@@ -684,7 +776,7 @@ function applyQuality(q) {
   canvas.width = Math.round(view.w * q);
   canvas.height = Math.round(view.h * q);
   setSpriteScale(Math.min(2, Math.max(1, q)));
-  arena = Art.bakeArena(view, q, currentMap);
+  arena = bakeWorld();
 }
 
 // ---------- The title screen: 4 bots really play, in the page, with the real rules ----------
@@ -765,6 +857,7 @@ function fit() {
   qualityFloor = isTouch ? Math.min(best, 0.7) : Math.min(best, 1);
   applyQuality(quality && quality < best ? Math.max(quality, qualityFloor) : best);
   tilesDirty = true;
+  trail?.fit();
 }
 
 // ---------- Screens and interface ----------
@@ -785,7 +878,7 @@ function setScreen(name) {
 }
 
 function updateScreen() {
-  if (!inGame) return setScreen('home');
+  if (!inGame) return setScreen(campaignPage ? 'map' : 'home');
   if (screen === 'lost') return;
   const last = snaps[snaps.length - 1];
   if (!last || !me) return setScreen('wait');
@@ -858,8 +951,9 @@ function browse(h, byHand = true) {
   }
   for (const tile of $('roster').children) tile.classList.toggle('browsing', Number(tile.dataset.h) === h);
   const hero = HEROES[h];
-  $('detail').className = `box tone-${hero.name.toLowerCase()}`;
+  $('detail').className = `box tone-${toneOf(hero)}`;
   $('detail-name').textContent = hero.name;
+  if (hero.title) $('detail-name').append(' ', Object.assign(document.createElement('small'), { textContent: hero.title }));
   $('detail-skill').innerHTML = `<span class="card-icon">${ICONS[h]}</span>${hero.skill}`;
   $('detail-text').textContent = hero.text;
   $('detail-cd').textContent = hero.cd;
@@ -965,14 +1059,15 @@ function buildMapCards() {
 }
 
 function buildCards() {
-  for (const [i, h] of HEROES.entries()) {
+  for (const [place, i] of ROSTER.entries()) {
+    const h = HEROES[i];
     const tile = document.createElement('button');
     tile.type = 'button';
-    tile.className = `tile tone-${h.name.toLowerCase()}`;
+    tile.className = `tile tone-${toneOf(h)}`;
     tile.dataset.h = i;
-    tile.setAttribute('aria-label', `${h.name}: ${h.skill}`);
+    tile.setAttribute('aria-label', `${h.full}: ${h.skill}`);
     // Number keys reach the first 10 heroes, with 0 as the 10th.
-    tile.innerHTML = `<span class="tile-art"><canvas></canvas><span class="chips"></span></span><span class="tile-name">${h.name}</span>${i < 10 ? `<kbd>${(i + 1) % 10}</kbd>` : ''}`;
+    tile.innerHTML = `<span class="tile-art"><canvas></canvas><span class="chips"></span></span><span class="tile-name">${h.name}</span>${place < 10 ? `<kbd>${(place + 1) % 10}</kbd>` : ''}`;
     tile.addEventListener('click', () => browse(i));
     $('roster').append(tile);
     tileArt.push({ g: tile.querySelector('canvas').getContext('2d'), hero: i });
@@ -982,7 +1077,7 @@ function buildCards() {
     if (isTouch) goFullscreen();
     sendHero(browsing);
   });
-  browse(0, false);
+  browse(ROSTER[0], false);
 }
 
 function updateHud(last) {
@@ -990,7 +1085,7 @@ function updateHud(last) {
   if (signature !== plateSig) {
     plateSig = signature;
     $('plates').replaceChildren(
-      ...last.p.map((p) => {
+      ...last.p.filter((p) => !run?.road || p.id === myId).map((p) => {
         const mine = p.id === myId;
         const plate = document.createElement('div');
         plate.className = `plate${mine ? ' mine' : ''}`;
@@ -1001,7 +1096,7 @@ function updateHud(last) {
         if (p.hero !== null) portrait(face.getContext('2d'), p.hero, COLORS[p.id], 0);
         const name = document.createElement('span');
         name.className = 'plate-name';
-        name.textContent = mine ? 'YOU' : `P${p.id + 1}`;
+        name.textContent = nameOf(p.id);
         if (p.wins) name.append(Object.assign(document.createElement('span'), { className: 'wins', textContent: `★${p.wins}` }));
         const lives = document.createElement('span');
         lives.className = 'lives';
@@ -1014,7 +1109,7 @@ function updateHud(last) {
       }),
     );
   }
-  $('change-hero').hidden = last.p.length > 1;
+  $('change-hero').hidden = last.p.length > 1 || !!run;
   const pingText = ping === null || practice ? '' : `${Math.round(ping / 10) * 10} ms${lag ? ` (+${lag} each way)` : ''}`;
   if ($('ping').textContent !== pingText && last.k % 30 === 0) $('ping').textContent = pingText;
   if (me) {
@@ -1043,6 +1138,9 @@ function updateBuffs(p) {
   if (p.jw > 0) chips.push(['bad', `Held ${secs(p.jw)}s`]);
   if (p.tr > 0) chips.push(['bad', `Slowed ${secs(p.tr)}s`]);
   if (p.fz > 0) chips.push(['bad', `Frozen ${secs(p.fz)}s`]);
+  if (p.ss > 0) chips.push(['bad', `Slowed ${secs(p.ss)}s`]);
+  if (p.hk > 0) chips.push(['bad', `Stunned ${secs(p.hk)}s`]);
+  if (p.bk > 0) chips.push(['good', `Motorcycle ${secs(p.bk)}s`]);
   const signature = chips.join();
   if (signature === buffSig) return;
   buffSig = signature;
@@ -1058,24 +1156,26 @@ function updateBuffs(p) {
 
 function updateSkill(p) {
   if (p.hero === null) return;
-  const armed = p.hero === NINJA && p.st > 0;
-  const cooling = p.cd > 0;
+  // Three heroes have a second press, with its own clock and its own name on the button.
+  const second = p.hero === NINJA && p.st > 0 ? [p.st, DECOY_STEPS, 'Swap back'] : p.hero === CASSIO && p.bk > 0 ? [p.bk, BIKE_STEPS, 'Throw bike'] : p.hero === DEXTAR && p.mr > 0 ? [p.mr, MARK_STEPS, 'Teleport'] : null;
+  const armed = !!second;
+  const cooling = !armed && p.cd > 0;
   const btn = $('skill');
-  if (armed || cooling) btn.style.setProperty('--left', (armed ? p.st / DECOY_STEPS : p.cd / SKILL_CD[p.hero]).toFixed(3));
-  const seconds = Math.ceil((armed ? p.st : p.cd) / STEPS_PER_SEC);
+  if (armed || cooling) btn.style.setProperty('--left', (armed ? second[0] / second[1] : p.cd / SKILL_CD[p.hero]).toFixed(3));
+  const seconds = Math.ceil((armed ? second[0] : p.cd) / STEPS_PER_SEC);
   const signature = [p.hero, armed, cooling, seconds].join();
   if (signature === skillSig) return;
   skillSig = signature;
   if (p.hero !== Number(btn.dataset.hero)) {
     btn.dataset.hero = p.hero;
-    btn.className = `tone-${HEROES[p.hero].name.toLowerCase()}`;
+    btn.className = `tone-${toneOf(HEROES[p.hero])}`;
     $('skill-icon').innerHTML = ICONS[p.hero];
   }
   btn.classList.toggle('armed', armed);
   btn.classList.toggle('cooling', cooling);
   btn.classList.toggle('ready', !armed && !cooling);
   $('skill-num').textContent = cooling ? seconds : '';
-  const name = armed ? `Swap back ${seconds}` : HEROES[p.hero].skill;
+  const name = armed ? `${second[2]} ${seconds}` : HEROES[p.hero].skill;
   $('skill-name').textContent = name;
   btn.setAttribute('aria-label', cooling ? `${name}, ready in ${seconds} seconds` : `${name}, ready`);
 }
@@ -1110,7 +1210,7 @@ addEventListener('keydown', (e) => {
   if (e.target.tagName === 'INPUT') return;
   if (e.code === 'Escape' && inGame) return setMenu($('menu').hidden);
   if (screen === 'pick') {
-    if (/^Digit\d$/.test(e.code)) return browse((Number(e.code[5]) + 9) % 10);
+    if (/^Digit\d$/.test(e.code)) return browse(ROSTER[(Number(e.code[5]) + 9) % 10]);
     if (e.code === 'Enter' && e.target.tagName !== 'BUTTON') return sendHero(browsing);
   }
   // Space on a focused button should press the button, not jump.
@@ -1385,6 +1485,121 @@ $('practice-setup').addEventListener('submit', (e) => {
   location.search = params.toString();
 });
 
+// ---------- The campaign ----------
+
+function campaignName() {
+  return run.stop.kind === 'fight' ? HEROES[run.stop.hero].name : '';
+}
+
+function clearRoom() {
+  snaps = [];
+  pending = [];
+  fxQueue = [];
+  me = null;
+  myPrev = null;
+  errX = errY = 0;
+  clockOffset = null;
+  stepClock = 0;
+  lastTime = performance.now();
+  lastPk = 0;
+  lastOver = 0;
+  plateSig = skillSig = dashSig = buffSig = '';
+  Fx.clearEffects();
+  $('stop-end').hidden = true;
+  $('skill').removeAttribute('data-hero');
+  view.l = (W - view.w) / 2;
+}
+
+function startStop(i) {
+  const stop = STOPS[i];
+  clearRoom();
+  run = { i, stop, road: stop.road ?? null, phase: '', said: 0, line: null, lineAt: 0 };
+  practice = { bots: 1, level: 'easy' };
+  inGame = true;
+  document.body.dataset.mode = run.road ? 'road' : 'fight';
+  releaseControls();
+  // A stop always bakes its own picture, because a road and a fight in the same forest look different.
+  currentMap = -1;
+  syncMap(run.road ? HOLLOW : stop.map);
+  ws = run.road ? createRoad(stop, stop.as, onMessage) : createFight(stop, save.hero, onMessage);
+  onMessage({ t: 'hi', id: 0 });
+  showBanner(run.road ? `AREA ${stop.area}: ${stop.road.name.toUpperCase()}` : `${campaignName().toUpperCase()} AWAITS`, 'fight');
+  play('fight');
+}
+
+function toMap() {
+  clearRoom();
+  setMenu(false);
+  hideBanner();
+  run = null;
+  ws = null;
+  practice = null;
+  inGame = false;
+  document.body.dataset.mode = '';
+  // The map has to be showing, or it has no height to draw to.
+  setScreen('map');
+  trail.open(save);
+}
+
+function finish() {
+  save = finishStop(save, run.i);
+  storeSave(save);
+}
+
+function showEnd(title, text, hero, next, nextLabel) {
+  $('end-title').textContent = title;
+  $('end-text').textContent = text;
+  const c = $('end-face');
+  c.hidden = hero === null;
+  if (hero !== null) portrait(c.getContext('2d'), hero, COLORS[0], 0, gunFor(hero));
+  $('end-next').hidden = next === null;
+  $('end-next').textContent = nextLabel;
+  $('end-next').onclick = () => startStop(next);
+  $('stop-end').hidden = false;
+  releaseControls();
+}
+
+function nextAfter(i) {
+  return canPlay(i + 1, save.done) ? i + 1 : null;
+}
+
+function onCamp(c, mine) {
+  if (c.ph === 'absorb' && c.t === c.swapAt) {
+    finish();
+    Fx.trigger({ k: 'become', x: mine.x, y: mine.y });
+    showBanner('POWER ABSORBED', 'fight');
+  }
+  if (c.ph === run.phase) return;
+  run.phase = c.ph;
+  const name = campaignName();
+  if (c.ph === 'death') showBanner(`${name.toUpperCase()} FALLS`, 'call');
+  else if (c.ph === 'claim') {
+    Fx.trigger({ k: 'thud', x: c.x, y: c.y });
+    showBanner('ABSORB THE POWER', 'call');
+  } else if (c.ph === 'absorb') {
+    hideBanner();
+    play('absorb');
+  } else if (c.ph === 'lost') {
+    play('lose');
+    showEnd('Defeated', `${name} still stands. Fight from the middle of a floor, where one hit can’t knock you straight off.`, null, run.i, 'Rematch');
+  } else if (c.ph === 'done') {
+    const hero = HEROES[run.stop.hero];
+    const next = nextAfter(run.i);
+    showEnd(`${name} unlocked`, `${hero.skill}: ${hero.text}`, run.stop.hero, next, next === null ? '' : `Next: Area ${STOPS[next].area}`);
+    if (next === null) $('end-text').append(' More areas are on the way.');
+  } else if (c.ph === 'goal') {
+    play('win');
+    finish();
+    const next = nextAfter(run.i);
+    showEnd('Road cleared', next === null ? 'More areas are on the way.' : `${HEROES[STOPS[next].hero].full} awaits in Area ${STOPS[next].area}. Choose who you fight as.`, null, next, next === null ? '' : 'Choose your hero');
+    $('end-next').onclick = toMap;
+  }
+}
+
+$('campaign-open').addEventListener('click', () => {
+  location.search = 'campaign=1';
+});
+
 if (practice) {
   $('leave').textContent = 'Leave practice';
   $('pick-leave').hidden = false;
@@ -1394,6 +1609,36 @@ if (practice) {
   ws = createPractice(practice.bots, practice.level, onMessage);
   onMessage({ t: 'hi', id: 0 });
 } else if (hasRoom) connect();
+else if (campaignPage) {
+  $('leave').textContent = 'Back to map';
+  $('leave').addEventListener('click', (e) => {
+    e.preventDefault();
+    toMap();
+  });
+  $('menu-room').hidden = true;
+  $('end-map').addEventListener('click', toMap);
+  trail = createTrail({
+    $,
+    portrait,
+    HEROES,
+    onPlay: (i) => {
+      if (isTouch) goFullscreen();
+      unlockAudio();
+      startStop(i);
+    },
+    onHero: (hero) => {
+      unlockAudio();
+      play('pick');
+      save = { ...save, hero };
+      storeSave(save);
+      return save;
+    },
+  });
+  $('trail-go').addEventListener('click', () => trail.play());
+  // After the page has its layout, or the map has no height to draw to.
+  setScreen('map');
+  trail.open(save);
+}
 
 // Frames drive the game; this only keeps a hidden tab connected, since browsers stop frames there.
 setInterval(() => {
@@ -1401,4 +1646,4 @@ setInterval(() => {
 }, 100);
 requestAnimationFrame(frame);
 
-globalThis.__arena = { me: () => me, latest: () => snaps[snaps.length - 1], ping: () => ping, setKeys: (k) => (keys = k), pick: sendHero, map: sendMap, screen: () => screen, view: () => ({ ...view, quality, scale }) };
+globalThis.__arena = { startStop, toMap, save: () => save, room: () => ws, me: () => me, latest: () => snaps[snaps.length - 1], ping: () => ping, setKeys: (k) => (keys = k), pick: sendHero, map: sendMap, screen: () => screen, view: () => ({ ...view, quality, scale }) };

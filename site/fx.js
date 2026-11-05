@@ -1,8 +1,8 @@
 // Things flying through the arena and every skill and hit animation. No game rules here.
-import { ARC, DECOY_STEPS, DOG_HP, FLAME, H, ITEMS, LASER, MINIGUN, NET_STEPS, RIFLE, ROCKET, SHOTGUN, SHURIKEN, SNIPER_GUN, W, WALL_H, WALL_HP, WALL_STEPS, WALL_W } from './sim.js';
+import { ARC, DECOY_STEPS, DOG_HP, FALL_STEPS, FALL_W, FLAME, H, ITEMS, LASER, MINIGUN, NET_STEPS, RIFLE, ROCKET, SHOTGUN, SHURIKEN, SNIPER_GUN, VAC_RADIUS, VAC_STEPS, W, WALL_H, WALL_HP, WALL_STEPS, WALL_W } from './sim.js';
 import { play } from './audio.js';
 import { LAVA_Y } from './art.js';
-import { CREAM, GOLD, INK, drawItemIcon, outlined, sprite, stamp, star } from './heroes.js';
+import { CREAM, GOLD, INK, drawBike, drawHero, drawItemIcon, drawKnife, outlined, sprite, stamp, star } from './heroes.js';
 
 const CALM = matchMedia('(prefers-reduced-motion: reduce)').matches;
 // The title screen's fight plays behind a menu, so it doesn't shake the screen.
@@ -13,6 +13,10 @@ const MAP_LOOK = [
   { dust: '#b9b3a8', splash: [CREAM, GOLD, '#ff8c16', '#f04a0d'] },
   { dust: '#b9d48a', splash: ['#dcffb4', '#a6e86a', '#55b84a', '#1f7f3c'] },
   { dust: '#e8c98a', splash: [CREAM, '#ffe28f', '#e6ab3c', '#b97a1e'] },
+  { dust: '#c9b4ff', splash: ['#f3e6ff', '#c79cff', '#8a4fe0', '#4a2296'] },
+  { dust: '#c8b49a', splash: ['#eefaff', '#a8e0ec', '#4f9fb8', '#1f5f78'] },
+  { dust: '#c9a26a', splash: [CREAM, '#e0a24a', '#9a5a1e', '#4a2410'] },
+  { dust: '#9fc98a', splash: ['#d8f59a', '#7fc47a', '#2f7f5a', '#123f30'] },
 ];
 let look = MAP_LOOK[0];
 export const setFxMap = (map) => (look = MAP_LOOK[map]);
@@ -516,7 +520,13 @@ const dogSprite = (frame) =>
     g.beginPath();
     g.arc(27.5, -27, 2, 0, Math.PI * 2);
     g.fill();
-    g.fillRect(16, -32, 3, 3);
+    g.beginPath();
+    g.ellipse(17.5, -30.5, 1.6, 2.5, 0, 0, Math.PI * 2);
+    g.fill();
+    g.fillStyle = '#fff';
+    g.beginPath();
+    g.arc(18, -31.5, 0.7, 0, Math.PI * 2);
+    g.fill();
     outlined(g, '#2e1a0c', () => g.ellipse(10, -32, 4, 7, 0.5, 0, Math.PI * 2), 2);
     outlined(g, '#d8261c', () => g.roundRect(6, -22, 12, 4, 2), 1.8);
     outlined(g, GOLD, () => g.arc(13, -17, 2, 0, Math.PI * 2), 1.2);
@@ -704,6 +714,288 @@ export function drawRock(g, r) {
   g.fillRect(r.x - 3, r.y - 2, 3, 3);
   g.fillRect(r.x + 3, r.y + 2, 2, 2);
 }
+
+// ---------- Seedea's waterfall ----------
+
+const FALL_TILE = 120;
+
+// One seamless stretch of rising water, scrolled and repeated up the screen.
+const fallSprite = () =>
+  sprite('falltile', [-FALL_W / 2 - 6, 0, FALL_W + 12, FALL_TILE], (g) => {
+    const half = FALL_W / 2;
+    const body = g.createLinearGradient(-half, 0, half, 0);
+    body.addColorStop(0, 'rgba(18,108,176,.86)');
+    body.addColorStop(0.22, 'rgba(62,194,232,.8)');
+    body.addColorStop(0.5, 'rgba(176,244,252,.7)');
+    body.addColorStop(0.78, 'rgba(62,194,232,.8)');
+    body.addColorStop(1, 'rgba(18,108,176,.86)');
+    g.fillStyle = body;
+    g.fillRect(-half, 0, FALL_W, FALL_TILE);
+    // Long streaks that meet themselves top to bottom, so the repeat never shows.
+    g.lineCap = 'round';
+    for (const [x, y, len, w, a] of [[-18, 8, 46, 3, 0.75], [-7, 58, 38, 2, 0.9], [4, 16, 52, 3.4, 0.85], [15, 66, 42, 2.4, 0.7], [-13, 84, 24, 1.6, 0.6], [9, 86, 26, 1.6, 0.7], [20, 12, 26, 1.6, 0.5]]) {
+      g.strokeStyle = `rgba(244,254,255,${a})`;
+      g.lineWidth = w;
+      g.beginPath();
+      g.moveTo(x, y);
+      g.lineTo(x, y + len);
+      g.stroke();
+    }
+    g.lineCap = 'butt';
+    // The dark edge every solid thing in the game has.
+    g.fillStyle = INK;
+    g.fillRect(-half - 2, 0, 2.5, FALL_TILE);
+    g.fillRect(half - 0.5, 0, 2.5, FALL_TILE);
+    g.fillStyle = '#d8fbff';
+    g.fillRect(-half + 0.5, 0, 1.5, FALL_TILE);
+    g.fillRect(half - 2, 0, 1.5, FALL_TILE);
+  });
+
+const bubbleSprite = () =>
+  sprite('bubble', [-9, -9, 18, 18], (g) => {
+    g.fillStyle = 'rgba(210,248,255,.28)';
+    g.beginPath();
+    g.arc(0, 0, 7, 0, Math.PI * 2);
+    g.fill();
+    g.strokeStyle = '#effdff';
+    g.lineWidth = 1.5;
+    g.stroke();
+    g.fillStyle = '#fff';
+    g.beginPath();
+    g.arc(-2.4, -2.6, 1.6, 0, Math.PI * 2);
+    g.fill();
+  });
+
+// Water climbing from the hazard to the top of the screen, with bubbles racing up it.
+export function drawFall(g, f, top, t) {
+  const age = FALL_STEPS - f.t;
+  const bottom = LAVA_Y + 6;
+  const grow = Math.min(1, (age + 1) / 8);
+  const shrink = Math.min(1, f.t / 8);
+  const high = bottom - (bottom - top) * grow;
+  g.save();
+  g.beginPath();
+  g.rect(f.x - FALL_W / 2 - 4, high, FALL_W + 8, bottom - high);
+  g.clip();
+  g.globalAlpha = shrink;
+  const tile = fallSprite();
+  const scroll = (t * 0.32) % FALL_TILE;
+  for (let y = bottom - scroll + FALL_TILE; y > high - FALL_TILE; y -= FALL_TILE) stamp(g, tile, f.x, y - FALL_TILE);
+  const bubble = bubbleSprite();
+  for (let i = 0; i < 12; i++) {
+    const rise = (t * (0.3 + (i % 4) * 0.04) + i * 67) % (bottom - top);
+    stamp(g, bubble, f.x + Math.sin(t * 0.004 + i * 2.1) * 15, bottom - rise);
+  }
+  g.restore();
+  // Foam where it leaves the surface.
+  g.globalAlpha = shrink;
+  for (let i = 0; i < 4; i++) {
+    const wob = Math.sin(t * 0.009 + i * 1.7) * 3;
+    outlined(g, i % 2 ? '#d8fbff' : '#8fe6f4', () => g.ellipse(f.x - 24 + i * 16, bottom - 6 + wob, 12, 6, 0, 0, Math.PI * 2), 1.8);
+  }
+  g.globalAlpha = 1;
+}
+
+// Whoever the water is carrying rides up inside a big bubble.
+export function drawRideBubble(g, x, y, t) {
+  const r = 32 + Math.sin(t * 0.012) * 1.5;
+  g.fillStyle = 'rgba(190,244,255,.2)';
+  g.beginPath();
+  g.ellipse(x, y - 25, r, r + 3, 0, 0, Math.PI * 2);
+  g.fill();
+  g.strokeStyle = INK;
+  g.lineWidth = 4;
+  g.stroke();
+  g.strokeStyle = '#d8fbff';
+  g.lineWidth = 2;
+  g.stroke();
+  g.strokeStyle = '#fff';
+  g.lineWidth = 2.5;
+  g.lineCap = 'round';
+  g.beginPath();
+  g.arc(x, y - 25, r - 6, Math.PI * 1.1, Math.PI * 1.45);
+  g.stroke();
+  g.lineCap = 'butt';
+}
+
+// ---------- Cassio's thrown bike ----------
+
+const bikeSprite = () => sprite('bike', [-52, -52, 104, 62], (g) => drawBike(g, 90, true));
+
+// Flung sideways, tumbling end over end, with sparks off the back.
+export function drawThrownBike(g, n, x, y, t) {
+  const dir = Math.sign(n.vx);
+  g.save();
+  g.translate(x, y);
+  g.scale(dir, 1);
+  g.rotate(t * 0.018);
+  g.translate(0, 20);
+  stamp(g, bikeSprite());
+  g.restore();
+  if (Math.random() < 0.7) bit(x - dir * 34, y + rand(-14, 14), -dir * rand(1, 4), rand(-2, 2), Math.random() < 0.5 ? GOLD : '#ff7a33', rand(2, 4), 14, 0.15);
+}
+
+// ---------- Dextar's knife and his mark ----------
+
+const flyingKnifeSprite = () => sprite('flyingknife', [-62, -22, 124, 44], (g) => drawKnife(g, 2));
+
+export function drawFlyingKnife(g, n, x, y) {
+  const dir = Math.sign(n.vx);
+  // A pale slash behind it, so it can be seen coming from across the map.
+  g.fillStyle = 'rgba(255,90,110,.32)';
+  g.fillRect(dir > 0 ? x - 110 : x + 30, y - 2.5, 80, 5);
+  g.fillStyle = 'rgba(255,240,240,.75)';
+  g.fillRect(dir > 0 ? x - 60 : x + 30, y - 1, 30, 2);
+  g.save();
+  g.translate(x, y);
+  g.scale(dir, 1);
+  stamp(g, flyingKnifeSprite());
+  g.restore();
+}
+
+const markSprite = () =>
+  sprite('mark', [-22, -22, 44, 44], (g) => {
+    g.strokeStyle = INK;
+    g.lineWidth = 5;
+    g.beginPath();
+    g.arc(0, 0, 15, 0, Math.PI * 2);
+    g.stroke();
+    g.strokeStyle = '#ff3a50';
+    g.lineWidth = 2.4;
+    g.stroke();
+    for (let i = 0; i < 4; i++) {
+      g.save();
+      g.rotate((i * Math.PI) / 2);
+      outlined(g, '#fff1f1', () => {
+        g.moveTo(-3.4, -21);
+        g.lineTo(3.4, -21);
+        g.lineTo(0, -9);
+        g.closePath();
+      }, 1.6);
+      g.restore();
+    }
+  });
+
+// A turning sigil over whoever Dextar has marked. Everyone can see it.
+export function drawMark(g, x, y, t, left) {
+  if (left < 30 && Math.floor(t / 110) % 2) return;
+  g.save();
+  g.translate(x, y - 84);
+  g.rotate(t * 0.004);
+  stamp(g, markSprite());
+  g.restore();
+}
+
+// ---------- VI's grenade and vortex ----------
+
+const grenadeSprite = () =>
+  sprite('vigrenade', [-14, -14, 28, 28], (g) => {
+    outlined(g, '#2a1248', () => g.arc(0, 0, 9, 0, Math.PI * 2), 2.5);
+    g.strokeStyle = '#c79cff';
+    g.lineWidth = 1.6;
+    g.beginPath();
+    g.ellipse(0, 0, 9, 3.4, 0.5, 0, Math.PI * 2);
+    g.stroke();
+    outlined(g, '#f3e6ff', () => g.arc(0, 0, 3.4, 0, Math.PI * 2), 1.4);
+    outlined(g, GOLD, () => g.roundRect(-3, -12, 6, 4, 1.4), 1.4);
+  });
+
+const vortexSprite = (layer) =>
+  sprite(`vortex${layer}`, [-VAC_RADIUS, -VAC_RADIUS, VAC_RADIUS * 2, VAC_RADIUS * 2], (g) => {
+    if (layer === 0) {
+      const soft = g.createRadialGradient(0, 0, 0, 0, 0, VAC_RADIUS);
+      soft.addColorStop(0, 'rgba(18,4,40,.86)');
+      soft.addColorStop(0.2, 'rgba(92,40,180,.5)');
+      soft.addColorStop(0.72, 'rgba(120,60,220,.16)');
+      soft.addColorStop(1, 'rgba(120,60,220,0)');
+      g.fillStyle = soft;
+      g.beginPath();
+      g.arc(0, 0, VAC_RADIUS, 0, Math.PI * 2);
+      g.fill();
+      return;
+    }
+    // Arms of a spiral, thin at the rim and bright at the heart.
+    g.lineCap = 'round';
+    for (let arm = 0; arm < 5; arm++) {
+      const start = (arm * Math.PI * 2) / 5;
+      for (let i = 0; i < 26; i++) {
+        const a = i / 26;
+        const r0 = VAC_RADIUS * (1 - a);
+        const r1 = VAC_RADIUS * (1 - (i + 1) / 26);
+        const turn0 = start + a * 3.4;
+        const turn1 = start + ((i + 1) / 26) * 3.4;
+        g.strokeStyle = `rgba(${a > 0.6 ? '243,230,255' : '199,156,255'},${0.2 + a * 0.75})`;
+        g.lineWidth = 1 + a * 3.6;
+        g.beginPath();
+        g.moveTo(Math.cos(turn0) * r0, Math.sin(turn0) * r0);
+        g.lineTo(Math.cos(turn1) * r1, Math.sin(turn1) * r1);
+        g.stroke();
+      }
+    }
+    g.lineCap = 'butt';
+  });
+
+export function drawVac(g, v, x, y, t) {
+  if (!v.open) {
+    g.save();
+    g.translate(x, y);
+    g.rotate(t * 0.02);
+    stamp(g, grenadeSprite());
+    g.restore();
+    return;
+  }
+  const age = 1 - v.t / VAC_STEPS;
+  // It snaps open at once and collapses only at the very end, so its reach is honest the whole time.
+  const size = Math.min(1, age * 7) * Math.min(1, (v.t + 2) / 5);
+  g.save();
+  g.translate(x, y);
+  g.globalAlpha = Math.min(1, size * 1.2);
+  g.scale(size, size);
+  stamp(g, vortexSprite(0));
+  g.rotate(t * 0.009);
+  stamp(g, vortexSprite(1));
+  g.restore();
+  g.globalAlpha = 1;
+  // The rim of the reach, then a hard bright core.
+  g.strokeStyle = INK;
+  g.lineWidth = 4;
+  g.beginPath();
+  g.arc(x, y, VAC_RADIUS * size, 0, Math.PI * 2);
+  g.stroke();
+  g.strokeStyle = '#c79cff';
+  g.lineWidth = 2;
+  g.stroke();
+  outlined(g, '#12042a', () => g.arc(x, y, 12 * size + 2, 0, Math.PI * 2), 2.5);
+  g.strokeStyle = '#f3e6ff';
+  g.lineWidth = 2;
+  g.beginPath();
+  g.arc(x, y, 7 * size, 0, Math.PI * 2);
+  g.stroke();
+  // Grit dragged in from the edge.
+  if (Math.random() < 0.8) {
+    const a = rand(0, Math.PI * 2);
+    const r = VAC_RADIUS * rand(0.7, 1);
+    bit(x + Math.cos(a) * r, y + Math.sin(a) * r, -Math.cos(a) * r * 0.06, -Math.sin(a) * r * 0.06, Math.random() < 0.5 ? '#c79cff' : '#f3e6ff', rand(2, 4), 16);
+  }
+}
+
+// Slowed by the bike or the vortex: heavy arrows pressing down over the head.
+const slowSprite = () =>
+  sprite('softslow', [-16, -8, 32, 18], (g) => {
+    for (const x of [-9, 9]) {
+      outlined(g, '#c7cedb', () => {
+        g.moveTo(x - 5, -4);
+        g.lineTo(x + 5, -4);
+        g.lineTo(x + 5, 1);
+        g.lineTo(x + 8, 1);
+        g.lineTo(x, 8);
+        g.lineTo(x - 8, 1);
+        g.lineTo(x - 5, 1);
+        g.closePath();
+      }, 1.6);
+    }
+  });
+export const drawSoftSlow = (g, x, y) => stamp(g, slowSprite(), x, y + 12);
 
 // Blinded: everything goes black except a small circle around you.
 export function drawBlindness(g, x, y, left, total) {
@@ -1092,8 +1384,119 @@ export function trigger(f) {
     play('smokebomb');
     smokeCloud(x, y);
     ring(x, y + 12, 6, 52, '#a7b1bf', 300, 5);
+  } else if (f.k === 'fallup') {
+    // Seedea: the water bursts out of the surface and climbs the whole screen.
+    play('water');
+    burst(x, LAVA_Y, 26, 11, ['#d8fbff', '#8fe6f4', '#3ec2e8'], 4.5, 26, 0.3);
+    addShake(4);
+  } else if (f.k === 'falldown') {
+    play('splash');
+    for (let i = 0; i < 26; i++) bit(x + rand(-24, 24), rand(view.t + 20, LAVA_Y), rand(-1, 1), rand(1, 5), i % 2 ? '#d8fbff' : '#3ec2e8', rand(2, 4), rand(14, 26), 0.3);
+  } else if (f.k === 'splash') {
+    play('splash');
+    burst(x, y, 8, 4, ['#d8fbff', '#8fe6f4'], 3, 14, 0.2, -f.f);
+  } else if (f.k === 'launch') {
+    // Thrown out of the top of the water.
+    play('splash');
+    ring(x, y, 12, 62, '#d8fbff', 280, 6);
+    burst(x, y, 18, 9, ['#d8fbff', '#8fe6f4', '#ffffff'], 3.6, 22, 0.18);
+  } else if (f.k === 'mount') {
+    // Cassio: a kick of exhaust, and the bike is under him.
+    play('engine');
+    smoke(x, y + 14, 12, 1.8, ['#6d6f78', '#3a3c44']);
+    ring(x, y + 12, 8, 60, '#ff7a33', 260, 5);
+    burst(x, y + 12, 12, 7, [GOLD, '#ff7a33'], 3, 16, 0.2);
+    shout('RIDE', x, y - 66, '#ff7a33', 24);
+    addShake(5);
+  } else if (f.k === 'bikethrow') {
+    play('throw');
+    play('engine');
+    addShake(4);
+  } else if (f.k === 'crash') {
+    play('crash');
+    ring(x, y, 10, 92, '#ff7a33', 340, 8);
+    ring(x, y, 6, 58, CREAM, 240, 5);
+    burst(x, y, 30, 12, [CREAM, GOLD, '#ff7a33', '#26282e', '#c6ccd6'], 5, 28, 0.3);
+    smoke(x, y, 12, 2.4, ['#6d6f78', '#3a3c44']);
+    shout('CRASH', x, y - 60, '#ff7a33', 28);
+    addShake(12);
+  } else if (f.k === 'clank') {
+    play('clank');
+    burst(x, y, 10, 6, [CREAM, '#c9d0da'], 2.6, 14, 0.25, -f.f);
+  } else if (f.k === 'knife') {
+    play('knife');
+    ring(x, y, 6, 32, '#ff3a50', 180, 4);
+  } else if (f.k === 'marked') {
+    play('marked');
+    ring(x, y, 46, 12, '#ff3a50', 260, 6);
+    burst(x, y, 12, 6, ['#ff3a50', '#fff1f1'], 3, 16, 0.08, f.f);
+    shout('MARKED', x, y - 62, '#ff5a6e', 24);
+    addShake(3);
+  } else if (f.k === 'blink') {
+    // Dextar: cards and red smoke where he was, and he's already behind you.
+    play('blink');
+    const { fromX, fromY } = f;
+    smoke(fromX, fromY, 14, 1.4, ['#a81a30', '#3a0a14']);
+    smoke(x, y, 10, 1.4, ['#a81a30', '#3a0a14']);
+    effect(240, (g, p) => {
+      const fadeOut = 1 - p;
+      for (let i = 0; i < 5; i++) {
+        const off = -18 + i * 9;
+        g.strokeStyle = `rgba(255,${i % 2 ? 58 : 220},${i % 2 ? 80 : 220},${fadeOut * 0.8})`;
+        g.lineWidth = 2;
+        g.beginPath();
+        g.moveTo(fromX + (x - fromX) * p * 0.8, fromY + off + (y - fromY) * p * 0.8);
+        g.lineTo(x, y + off);
+        g.stroke();
+      }
+    });
+    for (let i = 0; i < 8; i++) {
+      const dx = rand(-4, 4);
+      const dy = rand(-5, -1);
+      const spin = rand(-0.03, 0.03);
+      effect(620, (g, p) => {
+        g.save();
+        g.translate(fromX + dx * p * 16, fromY + dy * p * 14 + p * p * 40);
+        g.rotate(spin * p * 400);
+        g.globalAlpha = 1 - p;
+        outlined(g, '#fffdf4', () => g.roundRect(-4, -5.6, 8, 11.2, 1.4), 1.2);
+        g.fillStyle = '#c81e36';
+        g.beginPath();
+        g.arc(0, 0, 1.8, 0, Math.PI * 2);
+        g.fill();
+        g.restore();
+      });
+    }
+    addShake(5);
+  } else if (f.k === 'stunned') {
+    play('hitbig');
+    ring(x, y, 44, 10, CREAM, 220, 6);
+    burst(x, y, 14, 7, [CREAM, '#ff3a50'], 3, 18, 0.1);
+    shout('STUNNED', x, y - 62, CREAM, 24);
+    addShake(7);
+  } else if (f.k === 'vacopen') {
+    // VI: the grenade hits the floor and the air folds in on it.
+    play('vortex');
+    ring(x, y, VAC_RADIUS, 20, '#f3e6ff', 300, 7);
+    burst(x, y, 14, 6, ['#c79cff', '#f3e6ff'], 3, 18, 0.05);
+    addShake(7);
+  } else if (f.k === 'pulled') {
+    shout('PULLED', x, y - 60, '#c79cff', 20);
+  } else if (f.k === 'paperhit') {
+    play('paper');
+    burst(x, y, 6, 3, ['#f7ecd2', '#d9c49a'], 3, 16, 0.15, -f.f);
+  } else if (f.k === 'papertear') {
+    play('tear');
+    for (let i = 0; i < 18; i++) bit(x + rand(-8, 8), y + rand(-28, 28), rand(-3, 3), rand(-3, 1), i % 2 ? '#f7ecd2' : '#d9c49a', rand(3, 5), rand(22, 40), 0.14);
+  } else if (f.k === 'paperup') {
+    play('snap');
+  } else if (f.k === 'door') {
+    // Through a sliding door: a puff at both ends.
+    play('door');
+    smoke(f.fromX, f.fromY, 8, 1.2, ['#b9a98f', '#6e5f4a']);
+    smoke(x, y, 8, 1.2, ['#b9a98f', '#6e5f4a']);
   } else if (f.k === 'guard') {
-    // Bulwark: the shield slams into place with a gold ring.
+    // Aquilles: the shield slams into place with a gold ring.
     play('equip');
     ring(x, y, 60, 30, GOLD, 240, 7);
     burst(x, y, 12, 6, [GOLD, CREAM], 3, 18, 0.05);
@@ -1176,6 +1579,144 @@ export function trigger(f) {
     ring(kx, inLava ? LAVA_Y : y, 10, 110, GOLD, 420, 8);
     shout('KO!', kx, inLava ? LAVA_Y - 70 : y - 30, '#ff7a33', 44);
     addShake(14);
+  } else if (f.k === 'gust') {
+    play('gust');
+  } else if (f.k === 'fell') {
+    play('splash');
+    burst(clamp(x, view.l + 20, view.l + view.w - 20), LAVA_Y + 6, 20, 10, look.splash, 5, 30, 0.42);
+    addShake(6);
+  } else if (f.k === 'snap') {
+    play('snare');
+    burst(x, y - 8, 16, 7, [CREAM, '#8f6a41', '#3a2210'], 3.5, 22, 0.3);
+    addShake(6);
+  } else if (f.k === 'flag') {
+    play('pick');
+    ring(x, y - 40, 8, 60, GOLD, 360, 4);
+    burst(x, y - 50, 12, 4, [GOLD, CREAM], 3, 20, -0.02);
+    shout('CHECKPOINT', x, y - 86, CREAM, 18);
+  } else if (f.k === 'thud') {
+    play('hitbig');
+    burst(x, y - 4, 22, 7, [look.dust, CREAM, GOLD], 4, 26, 0.2);
+    ring(x, y - 6, 10, 90, CREAM, 340, 5);
+    addShake(10);
+  } else if (f.k === 'become') {
+    play('become');
+    if (!CALM) {
+      effect(420, (g, p) => {
+        g.globalAlpha = (1 - p) * 0.85;
+        g.fillStyle = '#fff6d6';
+        g.fillRect(view.l - 40, view.t - 40, view.w + 80, view.h + 80);
+        g.globalAlpha = 1;
+      });
+    }
+    ring(x, y - 22, 12, 210, GOLD, 620, 9);
+    ring(x, y - 22, 6, 130, CREAM, 460, 6);
+    burst(x, y - 22, 46, 11, [GOLD, CREAM, '#ffffff'], 6, 40, 0.1);
+    addShake(16);
+  }
+}
+
+// ---------- The campaign: a beaten boss's body, and its power crossing to you ----------
+
+const lerp = (a, b, p) => a + (b - a) * p;
+
+const fallenSprite = (hero) =>
+  sprite(`fallen${hero}`, [-56, -46, 112, 62], (g) => {
+    if (g.filter !== undefined) g.filter = 'grayscale(.6) brightness(.72)';
+    g.translate(-33, -15);
+    g.rotate(Math.PI / 2);
+    drawHero(g, { hero, color: '#8f8a7c', x: 0, y: 0, f: 1, vx: 0, ground: true, t: 0, scale: 1, preview: true, noGun: true });
+  });
+
+// The hero as pure light, for the power leaving the body.
+const soulSprite = (hero) =>
+  sprite(`soul${hero}`, [-50, -78, 100, 86], (g) => {
+    drawHero(g, { hero, color: GOLD, x: 0, y: 0, f: 1, vx: 0, ground: true, t: 0, scale: 1, preview: true, noGun: true });
+    g.globalCompositeOperation = 'source-in';
+    g.fillStyle = '#ffe9a6';
+    g.fillRect(-50, -78, 100, 86);
+  });
+
+const claimSprite = () =>
+  sprite('absorb', [-72, -62, 144, 62], (g) => {
+    g.font = 'italic 900 24px Tourney, Sora, sans-serif';
+    g.textAlign = 'center';
+    g.lineJoin = 'round';
+    g.lineWidth = 6;
+    g.strokeStyle = INK;
+    g.strokeText('ABSORB', 0, -32);
+    g.fillStyle = GOLD;
+    g.fillText('ABSORB', 0, -32);
+    outlined(g, GOLD, () => {
+      g.moveTo(-13, -24);
+      g.lineTo(13, -24);
+      g.lineTo(0, -6);
+      g.closePath();
+    });
+  });
+
+// c is what the room says; t is its step count, smoothed between snapshots. to is where you are.
+export function drawBody(g, c, t, to, now) {
+  if (c.ph === 'death') {
+    const p = Math.min(1, t / c.deathSteps);
+    const x = lerp(clamp(c.fx, view.l + 40, view.l + view.w - 40), c.x, p);
+    const y = lerp(LAVA_Y, c.y, p) - Math.sin(p * Math.PI) * 250;
+    g.save();
+    g.translate(x, y);
+    g.rotate((1 - p) * Math.PI * 3);
+    stamp(g, fallenSprite(c.h));
+    g.restore();
+    bit(x + rand(-14, 14), y + rand(-14, 14), rand(-1, 1), rand(-1, 1), Math.random() < 0.5 ? GOLD : look.splash[1], rand(2, 5), 18, 0.05);
+    return;
+  }
+  if (c.ph === 'claim') {
+    stamp(g, fallenSprite(c.h), c.x, c.y);
+    // A slow gleam over it, so the prize is the first thing you look for.
+    for (let i = 0; i < 7; i++) {
+      const q = (now / 1300 + i / 7) % 1;
+      g.globalAlpha = Math.sin(q * Math.PI);
+      g.fillStyle = i % 2 ? GOLD : CREAM;
+      g.fillRect(c.x - 40 + ((i * 37) % 80), c.y - 6 - q * 46, 3.2, 3.2);
+    }
+    g.globalAlpha = 1;
+    stamp(g, claimSprite(), c.x, c.y - 38 + Math.sin(now / 240) * 5);
+    return;
+  }
+  if (c.ph !== 'absorb' || !to) return;
+  const p = Math.min(1, t / c.swapAt);
+  if (p < 1) {
+    g.globalAlpha = 1 - p;
+    stamp(g, fallenSprite(c.h), c.x, c.y);
+    // The stream of power, always heading for you.
+    for (let i = 0; i < 26; i++) {
+      const q = (now / 620 + i / 26) % 1;
+      const eased = q * q;
+      g.globalAlpha = Math.min(1, p * 4) * (1 - q * 0.4);
+      g.fillStyle = i % 3 ? GOLD : CREAM;
+      const size = 5 - q * 2.5;
+      g.fillRect(lerp(c.x, to.x, eased) + Math.sin(i * 2.1 + q * 7) * 34 * (1 - q) - size / 2, lerp(c.y - 16, to.y - 22, eased) - Math.sin(q * Math.PI) * (46 + (i % 5) * 9) - size / 2, size, size);
+    }
+    // The body's own shape rises, crosses over and shrinks into you.
+    const q = clamp((p - 0.08) / 0.8, 0, 1);
+    const eased = q * q * (3 - 2 * q);
+    g.save();
+    g.translate(lerp(c.x, to.x, eased), lerp(c.y - 6, to.y - 4, eased) - Math.sin(q * Math.PI) * 74);
+    const size = 1.15 - eased * 0.75;
+    g.scale(size, size);
+    g.globalAlpha = 0.85 * Math.min(1, q * 6) * (1 - Math.max(0, q - 0.86) / 0.14);
+    stamp(g, soulSprite(c.h));
+    g.restore();
+    // Rings closing in on you.
+    g.strokeStyle = GOLD;
+    g.lineWidth = 3;
+    for (let i = 0; i < 3; i++) {
+      const close = (now / 520 + i / 3) % 1;
+      g.globalAlpha = close * p;
+      g.beginPath();
+      g.arc(to.x, to.y - 22, 14 + (1 - close) * 84, 0, Math.PI * 2);
+      g.stroke();
+    }
+    g.globalAlpha = 1;
   }
 }
 

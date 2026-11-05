@@ -2,8 +2,8 @@
 // Every few steps it tries its possible moves through the real movePlayer, scores where each one ends up against what it can see coming, and takes the best.
 // Levels differ in how late and how often it notices things, how much noise is in its choices, and which tricks it knows.
 import {
-  ANGLER, BULWARK, DOG_REACH, DUSK, GIFT_RADIUS, GUARD_TOUCH, GUNS, H, HANDLER, HOOK_HIT, ILLUSIONIST, KEY, MAX_RUN, METEOR_RADIUS, MOSSBACK, NET_RADIUS, NINJA, OUT_MARGIN, PISTOL, PLATFORMS,
-  POACHER, RIME, ROCKET, ROCKET_RADIUS, SANTA, SHADE, SHIFTER, SHOTGUN, FLAME, SNIPER, SNIPER_GUN, SPRINTER, STORM_RADIUS, TETHER, TRAP_REACH, TRAPPER, W, WALL_H, WALL_W, WAVE_HEIGHT, bodySize, movePlayer, muzzleY,
+  ANGLER, AQUILLES, BIKE_HIT, CASSIO, DEXTAR, DOG_REACH, DUSK, GIFT_RADIUS, GUARD_TOUCH, GUNS, H, HANDLER, HOOK_HIT, ILLUSIONIST, KEY, KNIFE_HIT, MAX_RUN, METEOR_RADIUS, MOSSBACK, NET_RADIUS, NINJA, OUT_MARGIN, PISTOL, PLATFORMS,
+  POACHER, RIME, ROCKET, ROCKET_RADIUS, SANTA, SCREEN_H, SEEDEA, SHADE, SHIFTER, SHOTGUN, FLAME, SNIPER, SNIPER_GUN, SPRINTER, STORM_RADIUS, TETHER, TRAP_REACH, TRAPPER, VAC_RADIUS, VI, W, WALL_H, WALL_W, WAVE_HEIGHT, bodySize, movePlayer, muzzleY,
 } from './sim.js';
 
 // think: steps between plans. horizon: steps tried ahead. react: steps before it reacts to a new threat. notice: chance it reacts at all.
@@ -29,7 +29,7 @@ const DASH_COST = 45;
 const RESCUE_DASH_COST = 5;
 const JUMP_COST = 2;
 const SECOND_JUMP_COST = 12;
-const HIT_WEIGHT = { net: 40, hook: 70, wave: 30, storm: 60, gift: 60, rock: 40, dog: 25, guard: 30, trap: 40 };
+const HIT_WEIGHT = { net: 40, hook: 70, wave: 30, storm: 60, gift: 60, rock: 40, dog: 25, guard: 30, trap: 40, bike: 70, knife: 45, vac: 55 };
 
 // ---------- Moves to try ----------
 
@@ -114,12 +114,12 @@ export function navFor(platforms) {
 const scratchTrack = {};
 
 // Where someone will be if they keep doing this. xs[0] is where they are now.
-function track(out, who, keysAt, walls) {
+function track(out, who, keysAt, walls, falls) {
   Object.assign(scratchTrack, who);
   for (let i = 0; i < TRACK_STEPS; i++) {
     out.xs[i] = scratchTrack.x;
     out.ys[i] = scratchTrack.y;
-    movePlayer(scratchTrack, keysAt(i), walls);
+    movePlayer(scratchTrack, keysAt(i), walls, falls);
   }
   return out;
 }
@@ -220,7 +220,7 @@ function notice(s, b, id) {
 function lineBlocked(s, fromX, toX, y) {
   const lo = Math.min(fromX, toX);
   const hi = Math.max(fromX, toX);
-  return s.walls.some((w) => w.x > lo && w.x < hi && y > w.y - WALL_H && y < w.y);
+  return s.falls.some((f) => f.x > lo && f.x < hi) || s.walls.some((w) => w.x > lo && w.x < hi && y > w.y - WALL_H && y < w.y) || s.screens.some((c) => c.hp > 0 && c.x > lo && c.x < hi && y > c.y - SCREEN_H && y < c.y);
 }
 
 function readThreats(s, p, b) {
@@ -235,6 +235,9 @@ function readThreats(s, p, b) {
     add({ kind: 'shot', x: u.x, y: u.y, vx: u.vx, vy: u.vy, ttl: u.t, extra: GUNS[u.g].hit ?? 0, near: rocket ? ROCKET_RADIUS / 2 : 0, cost: u.k * (rocket ? 3 : 1.5), push: Math.sign(u.vx) });
   }
   for (const n of s.nets) if (n.o !== p.id && notice(s, b, n.id)) add({ kind: 'ball', x: n.x, y: n.y, vx: n.vx, vy: n.vy, ttl: n.t, radius: NET_RADIUS, cost: HIT_WEIGHT.net, push: Math.sign(n.vx) });
+  for (const n of s.bikes) if (n.o !== p.id && notice(s, b, n.id)) add({ kind: 'ball', x: n.x, y: n.y, vx: n.vx, vy: 0, ttl: n.t, radius: BIKE_HIT, cost: HIT_WEIGHT.bike, push: 0 });
+  for (const n of s.knives) if (n.o !== p.id && notice(s, b, n.id)) add({ kind: 'ball', x: n.x, y: n.y, vx: n.vx, vy: 0, ttl: n.t, radius: KNIFE_HIT, cost: HIT_WEIGHT.knife, push: 0 });
+  for (const v of s.vacs) if (v.open && v.o !== p.id && notice(s, b, v.id)) add({ kind: 'vac', x: v.x, y: v.y, ttl: v.t, cost: HIT_WEIGHT.vac, push: 0 });
   for (const r of s.rocks) if (notice(s, b, r.id) && within(r.x, r.y, 400)) add({ kind: 'ball', x: r.x, y: r.y, vx: r.vx, vy: r.vy, ttl: 60, radius: METEOR_RADIUS, cost: HIT_WEIGHT.rock, push: Math.sign(r.vx) || 1 });
   for (const k of s.hooks) if (k.o !== p.id && k.c === undefined && notice(s, b, k.id)) add({ kind: 'ball', x: k.x, y: k.y, vx: k.vx, vy: 0, ttl: k.t, radius: HOOK_HIT, cost: HIT_WEIGHT.hook, push: -k.f });
   for (const w of s.waves) if (w.o !== p.id && !w.hit.includes(p.id) && notice(s, b, w.id)) add({ kind: 'wave', x: w.x, y: w.y, vx: w.vx, ttl: w.t, cost: HIT_WEIGHT.wave, push: Math.sign(w.vx) });
@@ -278,6 +281,8 @@ function threatHits(th, q, t, half, height) {
       return Math.abs(q.x - (th.x + th.vx * t)) <= 26 && Math.abs(q.y - height / 2 - th.y) <= WAVE_HEIGHT / 2;
     case 'storm':
       return Math.hypot(q.x - (th.x + th.vx * t), q.y - height / 2 - th.y) <= STORM_RADIUS;
+    case 'vac':
+      return Math.hypot(q.x - th.x, q.y - th.y) <= VAC_RADIUS;
     case 'gift':
       return t === th.ttl && Math.hypot(q.x - th.x, q.y - height / 2 - th.y) <= GIFT_RADIUS;
     case 'dog':
@@ -329,7 +334,7 @@ function tryMove(c, p, s, plan) {
   if (c.j1 >= 0) score -= p.g ? JUMP_COST : SECOND_JUMP_COST;
   if (c.j2 >= 0) score -= SECOND_JUMP_COST;
   for (let t = 0; t < horizon; t++) {
-    movePlayer(q, moveKeys(c, t), s.walls);
+    movePlayer(q, moveKeys(c, t), s.walls, s.falls);
     const size = bodySize(q);
     if (q.i <= 0 && q.gd <= 0) {
       for (let n = 0; n < threats.length; n++) {
@@ -448,12 +453,24 @@ function chooseSkill(s, p, b, foe, info) {
     if (p.st < 20 && p.g && Math.random() < L.skill * 5) return 0;
     return null;
   }
+  // The second press of these two doesn't wait for the cooldown.
+  if (p.hero === CASSIO && p.bk > 0) {
+    if (!foe || foe.gd > 0 || foe.i > 0) return p.bk < 10 ? 0 : null;
+    const near = Math.abs(foe.y - p.y) < 30 && Math.abs(foe.x - p.x) < 640 && !lineBlocked(s, p.x, foe.x, muzzleY(p));
+    return (near && Math.random() < Math.max(L.skill, 0.05)) || p.bk < 10 ? Math.sign(foe.x - p.x) || p.f : null;
+  }
+  if (p.hero === DEXTAR && p.mr > 0) {
+    // Harder bots save it to catch you at a ledge, but never let the mark run out.
+    const prey = s.players.find((o) => o.id === p.mk);
+    const worth = !L.edge || (prey && !hasFloor(prey.x + prey.f * 120, prey.y));
+    return p.mr < 30 || (worth && Math.random() < Math.max(L.skill, 0.05)) ? 0 : null;
+  }
   if (p.cd > 0) return null;
 
   if (L.defend) {
     if (danger) {
-      if (p.hero === BULWARK || p.hero === ILLUSIONIST || p.hero === SPRINTER || p.hero === SHADE) return 0;
-      if ((p.hero === MOSSBACK || p.hero === HANDLER) && shot) return faceThreat;
+      if (p.hero === AQUILLES || p.hero === ILLUSIONIST || p.hero === SPRINTER || p.hero === SHADE) return 0;
+      if ((p.hero === MOSSBACK || p.hero === HANDLER || p.hero === SEEDEA) && shot) return faceThreat;
       if (p.hero === SHIFTER && info.threat.kind === 'shot' && p.g) return 0;
     }
     if (p.hero === TETHER && (info.doomed || danger) && s.players.some((o) => o.id !== p.id && o.lives > 0 && o.iv === 0 && o.i === 0 && !(o.gd > 0))) return 0;
@@ -482,7 +499,7 @@ function chooseSkill(s, p, b, foe, info) {
       return across < (onEdge ? 260 : 160) && up < 110 ? face : null;
     case DUSK:
       return up < WAVE_HEIGHT / 2 && across < 650 ? face : null;
-    case BULWARK:
+    case AQUILLES:
       // A very hard bulwark keeps its guard for blocking, unless the shove itself would knock someone off.
       return across < 70 && up < 40 && (onEdge || !L.edge) ? face : null;
     case ILLUSIONIST:
@@ -505,6 +522,14 @@ function chooseSkill(s, p, b, foe, info) {
       return !L.defend ? (across > 220 ? 0 : null) : onEdge && across > 120 ? 0 : null;
     case SHADE:
       return across < 320 && up < 60 && !L.defend ? 0 : null;
+    case SEEDEA:
+      return !L.defend && across > 90 && across < 400 && up < 60 ? face : null;
+    case CASSIO:
+      return across > 180 && across < 800 ? face : null;
+    case DEXTAR:
+      return up < 22 && across < 900 && clear ? face : null;
+    case VI:
+      return across > 140 && across < 400 && up < 60 ? face : null;
     default:
       return null;
   }
@@ -523,10 +548,10 @@ function makePlan(s, p, b, foe) {
   const real = foe && foe.hero !== undefined;
   let aim = null;
   if (foe && L.lead && real) {
-    track(b.track, foe, () => held(foe), s.walls);
+    track(b.track, foe, () => held(foe), s.walls, s.falls);
     const action = L.predict && b.watcher && foe.id === b.human ? guess(b.watcher, s, foe) : ACTIONS.NONE;
     b.haveHabit = action !== ACTIONS.NONE;
-    if (b.haveHabit) track(b.habit, foe, habitKeys(action, foe), s.walls);
+    if (b.haveHabit) track(b.habit, foe, habitKeys(action, foe), s.walls, s.falls);
     b.trackAt = s.tick;
     const worth = 28 * (L.edge && !hasFloor(foe.x + Math.sign(foe.x - p.x) * 120, foe.y) ? 2 : 1);
     aim = foe.gd > 0 || foe.i > 0 ? null : { dir: Math.sign(foe.x - p.x) || p.f, track: b.haveHabit ? b.habit : b.track, height: bodySize(foe).h, worth };

@@ -72,7 +72,7 @@ const tap = async (p, k) => {
   await setKeys(p, 0);
   await sleep(70);
 };
-const NAMES = ['Sniper', 'Trapper', 'Ninja', 'Sprinter', 'Shifter', 'Santa', 'Dusk', 'Bulwark', 'Illusionist', 'Poacher', 'Angler', 'Handler', 'Mossback', 'Rime', 'Tether', 'Shade'];
+const NAMES = ['Sniper', 'Trapper', 'Ninja', 'Sprinter', 'Shifter', 'Santa', 'Dusk', 'Aquilles', 'Illusionist', 'Poacher', 'Angler', 'Handler', 'Mossback', 'Rime', 'Tether', 'Shade', 'Seedea', 'Cassio', 'Dextar', 'VI'];
 
 const home = await open();
 await home.size(1280, 720);
@@ -464,7 +464,7 @@ await host.shot('s-pick');
 await host.ev("document.getElementById('tab-map').click()");
 await sleep(700);
 await host.shot('s-map-tab');
-for (const m of [0, 1, 2]) {
+for (const m of [0, 1, 2, 3, 4]) {
   await host.ev(`document.querySelector('.map-card[data-map="${m}"]').click()`);
   await until(host, `__arena.latest().ch===${m}`, 3000);
 }
@@ -473,7 +473,7 @@ await until(host, '__arena.latest().ch===null', 3000);
 await host.ev("document.getElementById('tab-heroes').click()");
 await host.ev('__arena.pick(1)');
 await until(host, "__arena.screen()==='play'");
-for (const m of [0, 1, 2]) {
+for (const m of [0, 1, 2, 3, 4]) {
   await host.ev(`__arena.map(${m})`);
   await until(host, `__arena.latest().m===${m} && __arena.me().g===true`, 5000);
   await sleep(500);

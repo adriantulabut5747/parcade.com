@@ -7,7 +7,7 @@ const secs = (n) => n * STEPS_PER_SEC;
 export const W = 960;
 export const H = 540;
 export const MAX_PLAYERS = 4;
-export const LIVES = 3;
+export const LIVES = 5;
 export const PW = 24;
 export const PH = 36;
 export const KEY = { LEFT: 1, RIGHT: 2, JUMP: 4, DOWN: 8, SHOOT: 16, SKILL: 32, DASH: 64 };
@@ -20,7 +20,7 @@ export const SPRINTER = 3;
 export const SHIFTER = 4;
 export const SANTA = 5;
 export const DUSK = 6;
-export const BULWARK = 7;
+export const AQUILLES = 7;
 export const ILLUSIONIST = 8;
 export const POACHER = 9;
 export const ANGLER = 10;
@@ -29,8 +29,14 @@ export const MOSSBACK = 12;
 export const RIME = 13;
 export const TETHER = 14;
 export const SHADE = 15;
-export const HERO_COUNT = 16;
-export const SKILL_CD = [25, 15, 20, 25, 20, 15, 25, 20, 20, 15, 20, 25, 15, 25, 20, 25].map(secs);
+export const SEEDEA = 16;
+export const CASSIO = 17;
+export const DEXTAR = 18;
+export const VI = 19;
+export const HERO_COUNT = 20;
+// Not a pickable hero: the people guarding a campaign road. Past HERO_COUNT, so a room can never choose it.
+export const LOOKOUT = 20;
+export const SKILL_CD = [25, 15, 20, 25, 20, 15, 25, 20, 20, 15, 20, 25, 15, 25, 20, 25, 20, 25, 20, 20].map(secs);
 export const NET_STEPS = secs(1);
 export const DECOY_STEPS = secs(7);
 export const SPEED_STEPS = secs(6);
@@ -56,6 +62,24 @@ export const PICK_STEPS = secs(20);
 export const SCOPE_STEPS = secs(13);
 export const GHOST_STEPS = secs(3);
 export const FREEZE_STEPS = secs(1.5);
+export const FALL_STEPS = secs(7);
+export const FALL_W = 56;
+// How far past the water's edge you're still carried: going near it counts, not only going in.
+export const FALL_NEAR = 10;
+export const BIKE_STEPS = secs(8);
+export const BIKE_STUN = secs(1.5);
+export const BIKE_SLOW = secs(1);
+export const MARK_STEPS = secs(5);
+export const BLINK_STUN = secs(1.5);
+export const VAC_STEPS = secs(1.2);
+export const VAC_RADIUS = 230;
+export const VAC_SLOW = secs(2);
+export const SCREEN_HP = 3;
+export const SCREEN_W = 16;
+export const SCREEN_H = 62;
+export const SCREEN_BACK = secs(10);
+export const DOOR_LOCK = secs(1.5);
+export const LAUNCH_LOCK = 15;
 // How long a skill with nothing else to time it shows on its hero's picture.
 const SKIN_STEPS = secs(3);
 
@@ -126,7 +150,7 @@ const CRATE_STAY = secs(8);
 
 // What movePlayer did this step, as bits, so the server can spawn things and announce them.
 // The gun that fired sits above GUN_SHIFT.
-export const DID = { SHOT: 1, EQUIP: 2, NET: 4, DECOY: 8, TELEPORT: 16, FADE: 32, SPEED: 64, SHRINK: 128, GIFT: 256, WAVE: 512, DASH: 1024, GUARD: 2048, CLONES: 4096, TRAP: 8192, HOOK: 16384, DOG: 32768, WALL: 65536, STORM: 1 << 17, ZIP: 1 << 18, VANISH: 1 << 19, JUMP: 1 << 20, JUMP2: 1 << 21, LAND: 1 << 22 };
+export const DID = { SHOT: 1, EQUIP: 2, NET: 4, DECOY: 8, TELEPORT: 16, FADE: 32, SPEED: 64, SHRINK: 128, GIFT: 256, WAVE: 512, DASH: 1024, GUARD: 2048, CLONES: 4096, TRAP: 8192, HOOK: 16384, DOG: 32768, WALL: 65536, STORM: 1 << 17, ZIP: 1 << 18, VANISH: 1 << 19, JUMP: 1 << 20, JUMP2: 1 << 21, LAND: 1 << 22, CAST: 1 << 23 };
 export const GUN_SHIFT = 24;
 
 // Joystick position (-1 to 1 each way) to keys. Jump and drop need a firmer push, so running doesn't trigger them.
@@ -188,15 +212,104 @@ export const MAPS = [
       { x: 380, y: 120, w: 200 },
     ],
   },
+  {
+    // A ring of floating islands around one in the middle, with nothing at all between them.
+    name: 'The Drift',
+    spawn: [105, 855, 255, 705],
+    platforms: [
+      { x: 360, y: 420, w: 240 },
+      { x: 180, y: 345, w: 150 },
+      { x: 630, y: 345, w: 150 },
+      { x: 40, y: 270, w: 130 },
+      { x: 790, y: 270, w: 130 },
+      { x: 400, y: 270, w: 160 },
+      { x: 180, y: 195, w: 150 },
+      { x: 630, y: 195, w: 150 },
+      { x: 360, y: 120, w: 240 },
+    ],
+  },
+  {
+    // Two low wings, a long hall through the middle, two high wings. The doors link low left to high right.
+    name: 'Hidden Dojo',
+    spawn: [190, 770, 340, 620],
+    platforms: [
+      { x: 50, y: 420, w: 280 },
+      { x: 630, y: 420, w: 280 },
+      { x: 410, y: 420, w: 140 },
+      { x: 130, y: 345, w: 130 },
+      { x: 700, y: 345, w: 130 },
+      { x: 240, y: 270, w: 480 },
+      { x: 110, y: 195, w: 170 },
+      { x: 680, y: 195, w: 170 },
+      { x: 370, y: 120, w: 220 },
+    ],
+    // shortcut: every door has one partner, so a map holds one pair; a second pair needs an id on each door.
+    doors: [
+      { x: 72, y: 420 },
+      { x: 828, y: 195 },
+    ],
+    screens: [
+      { x: 350, y: 270 },
+      { x: 610, y: 270 },
+      { x: 250, y: 420 },
+      { x: 710, y: 420 },
+    ],
+  },
+  {
+    // Campaign only, the hunters' ground: hide walkways over a bog. Its long middle floor is where a beaten boss's body lands.
+    name: 'Hunter’s Hollow',
+    spawn: [235, 725, 420, 540],
+    platforms: [
+      { x: 300, y: 420, w: 360 },
+      { x: 60, y: 420, w: 160 },
+      { x: 740, y: 420, w: 160 },
+      { x: 170, y: 345, w: 120 },
+      { x: 670, y: 345, w: 120 },
+      { x: 30, y: 270, w: 130 },
+      { x: 390, y: 270, w: 180 },
+      { x: 800, y: 270, w: 130 },
+      { x: 190, y: 195, w: 150 },
+      { x: 620, y: 195, w: 150 },
+      { x: 400, y: 120, w: 160 },
+    ],
+  },
+  {
+    // Campaign only, Mossback's land: overgrown stone slabs from some old ruin, in deep jungle over black water.
+    name: 'Mossback’s Grove',
+    spawn: [110, 850, 385, 575],
+    platforms: [
+      { x: 350, y: 420, w: 260 },
+      { x: 40, y: 420, w: 140 },
+      { x: 780, y: 420, w: 140 },
+      { x: 190, y: 345, w: 110 },
+      { x: 660, y: 345, w: 110 },
+      { x: 20, y: 270, w: 160 },
+      { x: 320, y: 270, w: 130 },
+      { x: 510, y: 270, w: 130 },
+      { x: 780, y: 270, w: 160 },
+      { x: 230, y: 195, w: 130 },
+      { x: 600, y: 195, w: 130 },
+      { x: 400, y: 120, w: 160 },
+    ],
+  },
 ];
+// Rooms choose from the first few. The rest are the campaign's, so an older Worker and the map tab never meet them.
+export const PVP_MAPS = 5;
 
 // One-way platforms: you land on top and jump up through them.
 // Rooms can share a server process, so whatever moves things calls useMap first, in the same breath.
 export let PLATFORMS = MAPS[0].platforms;
 let SPAWN_X = MAPS[0].spawn;
+let DOORS = [];
 export function useMap(i) {
   PLATFORMS = MAPS[i].platforms;
   SPAWN_X = MAPS[i].spawn;
+  DOORS = MAPS[i].doors ?? [];
+}
+// A campaign road isn't a map: it has floors far past the arena's width, and no room ever runs on it.
+export function usePlatforms(list) {
+  PLATFORMS = list;
+  DOORS = [];
 }
 
 const GRAVITY = 1.6;
@@ -218,6 +331,26 @@ const BLIND_SLOW = 0.75;
 const GHOST_RUSH = 1.7;
 const SHRINK_RUSH = 1.2;
 const FREEZE_SLOW = 0.2;
+const BIKE_RUSH = 1.9;
+const SOFT_SLOW = 0.45;
+const FALL_GAP = 72;
+const LIFT_PUSH = 3.2;
+const LIFT_TOP = 11;
+// Above every platform on every map, so the ride always clears the top row before it throws you.
+const LIFT_END = 70;
+const LAUNCH_UP = -14;
+const LAUNCH_OUT = 9;
+const BIKE_SPEED = 26;
+const BIKE_LIFE = 26;
+export const BIKE_HIT = 24;
+const KNIFE_SPEED = 30;
+const KNIFE_LIFE = 34;
+export const KNIFE_HIT = 24;
+const BLINK_GAP = 30;
+const VAC_X = 10;
+const VAC_Y = -12;
+const VAC_PULL = 8;
+const DOOR_REACH = 13;
 const DASH_STEPS = 5;
 const DASH_SPEED = 22;
 const NET_SPEED = 32;
@@ -278,7 +411,7 @@ export const END_HOLD = secs(7);
 export const OUT_MARGIN = 160;
 
 // Everything that counts down on its own. n and st have their own rules below.
-const TIMERS = ['cd', 'sp', 'sm', 'bl', 'shT', 'hv', 'rb', 'gb', 'gi', 'lg', 'i', 'c', 'sl', 'dc', 'gd', 'tr', 'hk', 'ck', 'iv', 'lt', 'zp', 'sk', 'sc', 'gh', 'fz', 'jw'];
+const TIMERS = ['cd', 'sp', 'sm', 'bl', 'shT', 'hv', 'rb', 'gb', 'gi', 'lg', 'i', 'c', 'sl', 'dc', 'gd', 'tr', 'hk', 'ck', 'iv', 'lt', 'zp', 'sk', 'sc', 'gh', 'fz', 'jw', 'bk', 'mr', 'ss', 'lu', 'dr'];
 
 // The body you can be hit on. Small enough to sit under a bullet fired from the same floor.
 export function bodySize(p) {
@@ -296,8 +429,19 @@ const inLine = (p, y) => y > p.y - bodySize(p).h && y < p.y;
 const hittable = (s) => s.players.filter((p) => p.hero !== null && p.lives > 0);
 const wallAt = (s, x, y, r = 0) => s.walls.find((w) => Math.abs(x - w.x) < WALL_W / 2 + r && y > w.y - WALL_H - r && y < w.y + r);
 const cloneAt = (s, owner, x, y, r) => s.clones.find((c) => c.o !== owner && Math.abs(x - c.x) < PW / 2 + r && y > c.y - PH - r && y < c.y + r);
+const screenAt = (s, x, y, r = 0) => s.screens.find((c) => c.hp > 0 && Math.abs(x - c.x) < SCREEN_W / 2 + r && y > c.y - SCREEN_H - r && y < c.y + r);
+const fallAt = (s, x, r = 0) => s.falls.find((f) => Math.abs(x - f.x) < FALL_W / 2 + r);
+export const inFall = (falls, x, half = PW / 2) => falls.some((f) => Math.abs(x - f.x) < FALL_W / 2 + half + FALL_NEAR);
 
-function spawn(p) {
+// Anything flying in a line stops at a wall, a waterfall or a paper screen. A screen loses one shot's worth doing it.
+function stopAt(s, x, y, r = 6) {
+  if (wallAt(s, x, y, r) || fallAt(s, x, r)) return true;
+  const screen = screenAt(s, x, y, r);
+  if (screen) screen.hp--;
+  return !!screen;
+}
+
+export function spawn(p) {
   // Losing a decoy with a life still starts its cooldown.
   if (p.st > 0) p.cd = SKILL_CD[NINJA];
   Object.assign(p, {
@@ -340,11 +484,17 @@ function spawn(p) {
     gh: 0,
     fz: 0,
     jw: 0,
+    bk: 0,
+    mk: -1,
+    mr: 0,
+    ss: 0,
+    lu: 0,
+    dr: 0,
   });
 }
 
-function clearWorld(s) {
-  Object.assign(s, { bullets: [], nets: [], gifts: [], waves: [], crates: [], rocks: [], clones: [], traps: [], hooks: [], dogs: [], walls: [], storms: [], zips: [], meteors: 0 });
+export function clearWorld(s) {
+  Object.assign(s, { bullets: [], nets: [], gifts: [], waves: [], crates: [], rocks: [], clones: [], traps: [], hooks: [], dogs: [], walls: [], storms: [], zips: [], falls: [], bikes: [], knives: [], vacs: [], screens: (MAPS[s.map].screens ?? []).map((c) => ({ ...c, hp: SCREEN_HP, t: 0 })), meteors: 0 });
 }
 
 export function newGame() {
@@ -361,7 +511,7 @@ export function startPick(s) {
 
 export function startRound(s) {
   // Random unless the host picked a map.
-  const map = s.choice ?? Math.floor(Math.random() * MAPS.length);
+  const map = s.choice ?? Math.floor(Math.random() * PVP_MAPS);
   Object.assign(s, { pick: 0, over: 0, win: null, round: 0, drop: FIRST_DROP, map });
   useMap(map);
   clearWorld(s);
@@ -389,9 +539,16 @@ export function addPlayer(s, id) {
   return p;
 }
 
+function clearMarks(s, id) {
+  for (const o of s.players) {
+    if (o.mk === id) Object.assign(o, { mk: -1, mr: 0 });
+  }
+}
+
 export function removePlayer(s, id) {
   useMap(s.map);
   s.players = s.players.filter((p) => p.id !== id);
+  clearMarks(s, id);
   // The host's power passes on when they leave.
   if (s.host === id) s.host = s.players.length ? Math.min(...s.players.map((p) => p.id)) : null;
   if (s.players.length === 1 && s.pick === 0) {
@@ -427,7 +584,7 @@ function wallSpot(p) {
 
 // Only the host chooses, and null means random. Alone in a room, it takes effect straight away.
 export function chooseMap(s, id, map) {
-  if (id !== s.host || !(map === null || (Number.isInteger(map) && map >= 0 && map < MAPS.length))) return;
+  if (id !== s.host || !(map === null || (Number.isInteger(map) && map >= 0 && map < PVP_MAPS))) return;
   s.choice = map;
   if (map !== null && s.pick > 0) s.map = map;
   if (s.players.length === 1 && s.pick === 0 && s.players[0].hero !== null) startRound(s);
@@ -438,6 +595,15 @@ function useSkill(p) {
     // Swapping places with the decoy also breaks a net, and leaves 3 shurikens in hand.
     Object.assign(p, { x: p.sx, y: p.sy, vx: 0, vy: 0, n: 0, jw: 0, st: 0, cd: SKILL_CD[NINJA], gun: SHURIKEN, ammo: GUNS[SHURIKEN].ammo, c: 0 });
     return DID.TELEPORT;
+  }
+  // A second press while the bike or the mark is live doesn't wait for the cooldown.
+  if (p.hero === CASSIO && p.bk > 0) {
+    p.bk = 0;
+    return DID.CAST;
+  }
+  if (p.hero === DEXTAR && p.mr > 0) {
+    p.mr = 0;
+    return DID.CAST;
   }
   if (p.hero === null || p.cd > 0) return 0;
   if (p.hero === NINJA) {
@@ -457,6 +623,15 @@ function useSkill(p) {
     return DID.EQUIP;
   }
   if (p.hero === TRAPPER) return DID.NET;
+  if (p.hero === SEEDEA || p.hero === VI) return DID.CAST;
+  if (p.hero === CASSIO) {
+    p.bk = BIKE_STEPS;
+    return DID.CAST;
+  }
+  if (p.hero === DEXTAR) {
+    p.mk = -1;
+    return DID.CAST;
+  }
   if (p.hero === SPRINTER) {
     p.sp = SPEED_STEPS;
     // A short-lived sidearm too. Like the sniper's rifle, it replaces whatever you were holding.
@@ -471,7 +646,7 @@ function useSkill(p) {
   }
   if (p.hero === SANTA) return DID.GIFT;
   if (p.hero === DUSK) return DID.WAVE;
-  if (p.hero === BULWARK) {
+  if (p.hero === AQUILLES) {
     p.gd = GUARD_STEPS;
     return DID.GUARD;
   }
@@ -491,6 +666,20 @@ function useSkill(p) {
   p.wx = spot.x;
   p.wy = spot.y;
   return DID.WALL;
+}
+
+// Seedea's waterfall carries anything near it up, then throws it out of the top. Goes after gravity and before the body moves.
+function ride(b, half, falls) {
+  if (b.lu > 0 || !falls.length || !inFall(falls, b.x, half)) return;
+  if (b.y < LIFT_END) {
+    b.vy = LAUNCH_UP;
+    b.vx = b.f * LAUNCH_OUT;
+    b.lu = LAUNCH_LOCK;
+    // A jump to steer with on the way down.
+    b.j = Math.max(b.j ?? 0, 1);
+  } else if (b.vy > -LIFT_TOP) {
+    b.vy = Math.max(b.vy - LIFT_PUSH, -LIFT_TOP);
+  }
 }
 
 // One step for anything with feet. Walls are the arena's only solid thing: blocked from the sides and below, walkable on top.
@@ -534,8 +723,8 @@ function moveBody(b, half, h, walls, dropping, freeDrop = false) {
   }
 }
 
-// Moves one player one step. Returns the DID bits for what they did. The browser passes the walls from its latest snapshot.
-export function movePlayer(p, keys, walls = []) {
+// Moves one player one step. Returns the DID bits for what they did. The browser passes the walls and waterfalls from its latest snapshot.
+export function movePlayer(p, keys, walls = [], falls = []) {
   let did = 0;
   for (const k of TIMERS) if (p[k] > 0) p[k]--;
   // Mid-zip the server flies you along the line, and nothing else happens.
@@ -560,7 +749,7 @@ export function movePlayer(p, keys, walls = []) {
   const netted = p.n > 0 || p.jw > 0 || stunned;
   if (p.n > 0) p.n--;
   const dir = netted ? 0 : wanted;
-  const pace = (p.sp > 0 ? SPEED_BOOST : 1) * (p.gh > 0 ? GHOST_RUSH : 1) * (p.sm > 0 ? SHRINK_RUSH : 1) * (p.bl > 0 ? BLIND_SLOW : 1) * (p.tr > 0 ? TRAP_SLOW : 1) * (p.fz > 0 ? FREEZE_SLOW : 1);
+  const pace = (p.sp > 0 ? SPEED_BOOST : 1) * (p.gh > 0 ? GHOST_RUSH : 1) * (p.sm > 0 ? SHRINK_RUSH : 1) * (p.bl > 0 ? BLIND_SLOW : 1) * (p.tr > 0 ? TRAP_SLOW : 1) * (p.fz > 0 ? FREEZE_SLOW : 1) * (p.bk > 0 ? BIKE_RUSH : 1) * (p.ss > 0 ? SOFT_SLOW : 1);
   const top = MAX_RUN * pace;
   // Everyone's dash. It wipes out any knockback you're carrying, but it can't break a net.
   if (!netted && keys & KEY.DASH && !(p.b & KEY.DASH) && p.dc === 0) {
@@ -584,15 +773,21 @@ export function movePlayer(p, keys, walls = []) {
   if (p.j > jumps) p.j = jumps;
   if (!netted && keys & KEY.JUMP && !(p.b & KEY.JUMP) && p.j > 0) {
     did |= p.j === jumps ? DID.JUMP : DID.JUMP2;
-    p.vy = (p.j === jumps ? JUMP_1 : JUMP_2) * (p.tr > 0 || p.fz > 0 ? TRAP_JUMP : 1);
+    p.vy = (p.j === jumps ? JUMP_1 : JUMP_2) * (p.tr > 0 || p.fz > 0 || p.ss > 0 ? TRAP_JUMP : 1);
     p.j--;
     p.g = false;
   }
 
   const dropping = !netted && keys & KEY.DOWN;
   const size = bodySize(p);
+  ride(p, size.w / 2, falls);
   const falling = p.vy;
   moveBody(p, size.w / 2, size.h, walls, dropping, !(p.b & KEY.DOWN));
+  // Only walking in goes through a door, so standing in one or being shoved into it doesn't. Walking in from the side you came out of is what the lock is for.
+  if (dir && p.g && !p.dr && DOORS.length) {
+    const at = DOORS.findIndex((d) => d.y === p.y && Math.abs(d.x - p.x) < DOOR_REACH);
+    if (at >= 0) Object.assign(p, { x: DOORS[1 - at].x, y: DOORS[1 - at].y, dr: DOOR_LOCK });
+  }
   if (p.g) p.j = jumps;
   if (p.g && falling > LAND_DUST) did |= DID.LAND;
   // Walking off a ledge spends the ground jump.
@@ -636,15 +831,19 @@ function blocked(s, p, dir) {
   return false;
 }
 
+// Whoever last touched you gets the KO, and the hit on the results screen.
+function credit(s, p, by) {
+  if (by === undefined || by === p.id) return;
+  p.lh = by;
+  p.lt = LAST_HIT;
+  const shooter = s.players.find((o) => o.id === by);
+  if (shooter) shooter.hits++;
+}
+
 // Every push goes through here, so shields and heavy boots always count.
-function push(s, p, vx, vy, by) {
+export function push(s, p, vx, vy, by) {
   if (blocked(s, p, Math.sign(vx))) return false;
-  if (by !== undefined && by !== p.id) {
-    p.lh = by;
-    p.lt = LAST_HIT;
-    const shooter = s.players.find((o) => o.id === by);
-    if (shooter) shooter.hits++;
-  }
+  credit(s, p, by);
   const weight = (p.hv > 0 ? 0.5 : 1) * KNOCK_MORE;
   p.vx += vx * weight;
   p.vy = Math.min(p.vy, vy * weight);
@@ -662,6 +861,7 @@ function popClone(s, c) {
 function blast(s, x, y, radius, force, spare, flat = false, by = spare) {
   s.fx.push({ k: 'blast', id: spare ?? -1, x, y, r: radius, f: 1, gift: flat });
   for (const w of s.walls) if (w.o !== spare && Math.hypot(w.x - x, w.y - WALL_H / 2 - y) < radius) w.hp--;
+  for (const c of s.screens) if (c.hp > 0 && Math.hypot(c.x - x, c.y - SCREEN_H / 2 - y) < radius) c.hp = 0;
   for (const d of s.dogs) if (d.o !== spare && Math.hypot(d.x - x, d.y - DOG_H / 2 - y) < radius) d.hp--;
   for (const c of [...s.clones]) if (c.o !== spare && Math.hypot(c.x - x, c.y - PH / 2 - y) < radius) popClone(s, c);
   for (const p of hittable(s)) {
@@ -686,13 +886,13 @@ function fireGun(s, p, fired) {
   const y = muzzleY(p);
   const knock = g.knock * (p.gb > 0 ? 2 : 1) * (p.gi > 0 ? 1.5 : 1);
   if (g.beam) {
-    // The beam stops dead at the first wall in line.
+    // The beam stops dead at the first wall, waterfall or screen in line.
     const ahead = (x) => (x - p.x) * p.f;
-    const wall = s.walls.filter((w) => ahead(w.x) > 0 && y > w.y - WALL_H && y < w.y).sort((m, n) => ahead(m.x) - ahead(n.x))[0];
-    const reach = wall ? ahead(wall.x) : Infinity;
+    const stop = [...s.walls.filter((w) => y > w.y - WALL_H && y < w.y), ...s.falls, ...s.screens.filter((c) => c.hp > 0 && y > c.y - SCREEN_H && y < c.y)].filter((w) => ahead(w.x) > 0).sort((m, n) => ahead(m.x) - ahead(n.x))[0];
+    const reach = stop ? ahead(stop.x) : Infinity;
     const inBeam = (x) => ahead(x) > 0 && ahead(x) < reach;
-    if (wall && wall.o !== p.id) wall.hp--;
-    s.fx.push({ k: 'shot', id: p.id, x: p.x, y, f: p.f, g: gun, to: wall?.x });
+    if (stop && stop.hp !== undefined && stop.o !== p.id) stop.hp--;
+    s.fx.push({ k: 'shot', id: p.id, x: p.x, y, f: p.f, g: gun, to: stop?.x });
     for (const o of hittable(s)) {
       if (o.id === p.id || o.i > 0 || !inBeam(o.x) || !inLine(o, y)) continue;
       if (push(s, o, p.f * knock, KNOCK_UP, p.id)) s.fx.push({ k: 'hit', id: o.id, x: o.x, y, f: p.f });
@@ -728,6 +928,42 @@ function nearestFoe(s, owner, from) {
     }
   }
   return best;
+}
+
+// Dextar's second press: he lands behind whoever he marked, and they're stunned unless something blocks it.
+function blink(s, p) {
+  const foe = s.players.find((o) => o.id === p.mk && o.lives > 0);
+  p.mk = -1;
+  if (!foe) return;
+  const fromX = p.x;
+  const fromY = p.y - PH / 2;
+  // A jump to spare, because the mark may be over the lava.
+  Object.assign(p, { x: foe.x - foe.f * BLINK_GAP, y: foe.y, vx: 0, vy: 0, f: foe.f, n: 0, jw: 0, ds: 0, j: Math.max(p.j, 1) });
+  s.fx.push({ k: 'blink', id: p.id, x: p.x, y: p.y - PH / 2, f: p.f, fromX, fromY });
+  if (blocked(s, foe, foe.f)) return;
+  Object.assign(foe, { hk: BLINK_STUN, ds: 0 });
+  credit(s, foe, p.id);
+  s.fx.push({ k: 'stunned', id: foe.id, x: foe.x, y: foe.y - PH / 2, f: foe.f });
+}
+
+// The four skills that came after the bits ran out. Each one's state says which press this was.
+function cast(s, p, say, y) {
+  if (p.hero === SEEDEA) {
+    const x = p.x + p.f * FALL_GAP;
+    s.falls.push({ id: s.nextId++, o: p.id, x, t: FALL_STEPS });
+    say('fallup', { x });
+  } else if (p.hero === CASSIO) {
+    if (p.bk > 0) return say('mount');
+    s.bikes.push({ id: s.nextId++, o: p.id, x: p.x + p.f * PW, y, vx: p.f * BIKE_SPEED, t: BIKE_LIFE });
+    say('bikethrow');
+  } else if (p.hero === DEXTAR) {
+    if (p.mk >= 0) return blink(s, p);
+    s.knives.push({ id: s.nextId++, o: p.id, x: p.x + p.f * PW, y, vx: p.f * KNIFE_SPEED, t: KNIFE_LIFE });
+    say('knife');
+  } else if (p.hero === VI) {
+    s.vacs.push({ id: s.nextId++, o: p.id, x: p.x + p.f * 14, y: y - 8, vx: p.f * VAC_X, vy: VAC_Y, t: 0, open: false, hit: [] });
+    say('lob');
+  }
 }
 
 function act(s, p, did, fromX, fromY) {
@@ -799,11 +1035,25 @@ function act(s, p, did, fromX, fromY) {
     say('wave');
   }
   if (did & DID.DASH) say('dash');
+  if (did & DID.CAST) cast(s, p, say, y);
+  // Both of these were set during the move, so the count only equals the full lock on the step it happened.
+  if (p.lu === LAUNCH_LOCK) say('launch');
+  if (p.dr === DOOR_LOCK) say('door', { fromX, fromY: fromY - PH / 2 });
 }
 
 // Walls, clones and dogs stop a bullet before any player can. Returns true if one did.
 function bulletStopped(s, b, lo, hi) {
   const crosses = (x, half) => x > lo - half && x < hi + half;
+  const dir = Math.sign(b.vx);
+  // Nothing gets through a waterfall, your own shots included, and it can't be worn down.
+  const fall = s.falls.find((f) => crosses(f.x, FALL_W / 2));
+  const screen = !fall && s.screens.find((c) => c.hp > 0 && crosses(c.x, SCREEN_W / 2) && b.y > c.y - SCREEN_H && b.y < c.y);
+  if (fall || screen) {
+    if (b.g === ROCKET) blast(s, b.x, b.y, ROCKET_RADIUS, b.k, undefined, false, b.o);
+    else if (b.g !== FLAME) s.fx.push({ k: fall ? 'splash' : 'paperhit', id: b.o, x: (fall ?? screen).x - (dir * (fall ? FALL_W : SCREEN_W)) / 2, y: b.y, f: dir, g: b.g });
+    if (screen) screen.hp -= b.dmg ?? GUNS[b.g].dmg ?? 1;
+    return true;
+  }
   const wall = s.walls.find((w) => crosses(w.x, WALL_W / 2) && b.y > w.y - WALL_H && b.y < w.y);
   const clone = !wall && s.clones.find((c) => c.o !== b.o && crosses(c.x, PW / 2 + 6) && b.y > c.y - PH && b.y < c.y);
   const dog = !wall && !clone && s.dogs.find((d) => d.o !== b.o && crosses(d.x, DOG_W / 2 + 6) && b.y > d.y - DOG_H && b.y < d.y);
@@ -813,7 +1063,6 @@ function bulletStopped(s, b, lo, hi) {
     return true;
   }
   const dmg = b.dmg ?? GUNS[b.g].dmg ?? 1;
-  const dir = Math.sign(b.vx);
   if (clone) {
     popClone(s, clone);
     return true;
@@ -872,7 +1121,7 @@ function moveNets(s, playing) {
       s.fx.push({ k: 'snare', id: p.id, x: p.x, y: p.y - PH / 2, f: Math.sign(n.vx) });
       return false;
     }
-    if (n.t <= 0 || wallAt(s, n.x, n.y, 6)) {
+    if (n.t <= 0 || stopAt(s, n.x, n.y)) {
       s.fx.push({ k: 'netdrop', id: n.o, x: n.x, y: n.y, f: Math.sign(n.vx) });
       return false;
     }
@@ -951,7 +1200,7 @@ function moveHooks(s, playing) {
     k.x += k.vx;
     k.t--;
     // Twice, because it flies further in a step than a wall is wide.
-    if (wallAt(s, k.x, k.y, 6) || wallAt(s, k.x - k.vx / 2, k.y, 6)) return false;
+    if (stopAt(s, k.x, k.y) || stopAt(s, k.x - k.vx / 2, k.y)) return false;
     const clone = cloneAt(s, k.o, k.x, k.y, HOOK_HIT);
     if (clone) {
       popClone(s, clone);
@@ -1002,6 +1251,8 @@ function moveClones(s) {
     }
     c.vx = c.d * MAX_RUN;
     c.vy = Math.min(c.vy + GRAVITY, MAX_FALL);
+    if (c.lu > 0) c.lu--;
+    ride(c, PW / 2, s.falls);
     moveBody(c, PW / 2, PH, s.walls, false);
   }
 }
@@ -1031,6 +1282,8 @@ function moveDogs(s, playing) {
     d.vx = dir * DOG_SPEED;
     d.vy = Math.min(d.vy + GRAVITY, MAX_FALL);
     if (d.g && ((dy < -30 && Math.abs(dx) < 170) || (dir && !floorAhead(s, d, dir)))) d.vy = JUMP_1;
+    if (d.lu > 0) d.lu--;
+    ride(d, DOG_W / 2, s.falls);
     moveBody(d, DOG_W / 2, DOG_H, s.walls, dy > 30);
     if (prey && d.c === 0 && Math.abs(prey.x - d.x) < DOG_REACH && Math.abs(prey.y - d.y) < 40) {
       d.c = DOG_BITE_GAP;
@@ -1088,6 +1341,111 @@ function moveZips(s) {
       s.fx.push({ k: 'zipped', id: to.id, x: to.x, y: to.y - PH / 2, f: side });
     }
     return false;
+  });
+}
+
+function moveFalls(s) {
+  s.falls = s.falls.filter((f) => {
+    if (--f.t > 0) return true;
+    s.fx.push({ k: 'falldown', id: f.o, x: f.x, y: 400, f: 1 });
+    return false;
+  });
+}
+
+// A paper screen stays torn for a while, then the dojo patches it up.
+function moveScreens(s) {
+  for (const c of s.screens) {
+    if (c.hp > 0) continue;
+    if (c.t === 0) {
+      c.t = SCREEN_BACK;
+      s.fx.push({ k: 'papertear', id: -1, x: c.x, y: c.y - SCREEN_H / 2, f: 1 });
+    } else if (--c.t === 0) {
+      c.hp = SCREEN_HP;
+      s.fx.push({ k: 'paperup', id: -1, x: c.x, y: c.y - SCREEN_H / 2, f: 1 });
+    }
+  }
+}
+
+// The bike and the knife fly the same way, and differ only in what a hit does.
+function moveThrown(s, list, playing, reach, onHit) {
+  return list.filter((n) => {
+    n.x += n.vx;
+    n.t--;
+    // Twice, because they fly further in a step than a screen is wide.
+    if (stopAt(s, n.x, n.y) || stopAt(s, n.x - n.vx / 2, n.y)) {
+      s.fx.push({ k: 'clank', id: n.o, x: n.x, y: n.y, f: Math.sign(n.vx) });
+      return false;
+    }
+    const clone = cloneAt(s, n.o, n.x, n.y, reach);
+    if (clone) {
+      popClone(s, clone);
+      return false;
+    }
+    for (const p of playing) {
+      if (p.id === n.o || p.i > 0 || !overlaps(p, n.x, n.y, reach)) continue;
+      if (!blocked(s, p, Math.sign(n.vx))) onHit(p, n);
+      return false;
+    }
+    return n.t > 0;
+  });
+}
+
+function moveBikes(s, playing) {
+  s.bikes = moveThrown(s, s.bikes, playing, BIKE_HIT, (p, n) => {
+    // The stun runs first, then the slow is what's left of this timer.
+    Object.assign(p, { hk: BIKE_STUN, ss: BIKE_STUN + BIKE_SLOW, ds: 0 });
+    credit(s, p, n.o);
+    s.fx.push({ k: 'crash', id: p.id, x: p.x, y: p.y - PH / 2, f: Math.sign(n.vx) });
+  });
+}
+
+function moveKnives(s, playing) {
+  s.knives = moveThrown(s, s.knives, playing, KNIFE_HIT, (p, n) => {
+    const owner = s.players.find((o) => o.id === n.o);
+    if (owner) Object.assign(owner, { mk: p.id, mr: MARK_STEPS });
+    s.fx.push({ k: 'marked', id: p.id, x: p.x, y: p.y - PH / 2, f: Math.sign(n.vx) });
+  });
+}
+
+// VI's grenade flies until it finds a floor. Then it opens, and pulls everyone in reach to the middle for a moment.
+function moveVacs(s, playing) {
+  s.vacs = s.vacs.filter((v) => {
+    if (!v.open) {
+      if (fly(s, v)) {
+        Object.assign(v, { open: true, t: VAC_STEPS, vx: 0, vy: 0 });
+        s.fx.push({ k: 'vacopen', id: v.o, x: v.x, y: v.y, f: 1 });
+      }
+      return v.y < H + 20;
+    }
+    for (const c of [...s.clones]) if (c.o !== v.o && Math.hypot(c.x - v.x, c.y - v.y) < VAC_RADIUS) popClone(s, c);
+    for (const p of playing) {
+      // A dash is the way out. It's fast enough to beat the pull, so nothing else needs to be.
+      if (p.id === v.o || p.i > 0 || p.zp > 0 || p.gd > 0) continue;
+      const dx = v.x - p.x;
+      const dy = v.y - p.y;
+      const far = Math.hypot(dx, dy);
+      if (far > VAC_RADIUS) continue;
+      if (!v.hit.includes(p.id)) {
+        v.hit.push(p.id);
+        // A crate shield gives up one hit to stay out of it, for good.
+        if (blocked(s, p, Math.sign(dx))) {
+          v.safe = [...(v.safe ?? []), p.id];
+          continue;
+        }
+        credit(s, p, v.o);
+        s.fx.push({ k: 'pulled', id: p.id, x: p.x, y: p.y - PH / 2, f: Math.sign(dx) });
+      }
+      if (v.safe?.includes(p.id)) continue;
+      p.ss = VAC_SLOW;
+      if (far > 1) {
+        const pull = Math.min(far, VAC_PULL);
+        p.x += (dx / far) * pull;
+        p.y += (dy / far) * pull;
+      }
+      p.vx *= 0.6;
+      p.vy = Math.min(p.vy, 0);
+    }
+    return --v.t > 0;
   });
 }
 
@@ -1232,7 +1590,9 @@ function moveCrates(s, playing) {
 
 // One step of the match. keysOf(playerId) gives that player's keys for this step.
 export function step(s, keysOf) {
-  useMap(s.map);
+  // A campaign road brings its own floors.
+  if (s.floors) usePlatforms(s.floors);
+  else useMap(s.map);
   s.tick++;
   if (s.pick > 0) {
     // Practising alone has no clock.
@@ -1248,7 +1608,7 @@ export function step(s, keysOf) {
   const playing = hittable(s);
   for (const p of playing) {
     const { x, y } = p;
-    act(s, p, movePlayer(p, keysOf(p.id), s.walls), x, y);
+    act(s, p, movePlayer(p, keysOf(p.id), s.walls, s.falls), x, y);
   }
   moveBullets(s, playing);
   moveNets(s, playing);
@@ -1263,12 +1623,18 @@ export function step(s, keysOf) {
   moveStorms(s, playing);
   moveZips(s);
   moveWalls(s);
+  moveFalls(s);
+  moveBikes(s, playing);
+  moveKnives(s, playing);
+  moveVacs(s, playing);
+  moveScreens(s);
   guardTouch(s, playing);
 
-  const inMatch = s.players.filter((p) => p.hero !== null);
+  // A road has no score, and its floors run far past the arena's sides. Its room handles falls itself.
+  const inMatch = s.floors ? [] : s.players.filter((p) => p.hero !== null);
   const scoring = inMatch.length >= 2;
   for (const p of playing) {
-    if (p.y > H + OUT_MARGIN || p.x < -OUT_MARGIN || p.x > W + OUT_MARGIN) {
+    if (p.y > H + OUT_MARGIN || (!s.floors && (p.x < -OUT_MARGIN || p.x > W + OUT_MARGIN))) {
       // Whoever hit you within the last 5 s gets the KO.
       const by = p.lt > 0 ? p.lh : null;
       s.fx.push({ k: 'ko', id: p.id, x: p.x, y: Math.min(H, p.y), f: p.f, by });
@@ -1281,6 +1647,7 @@ export function step(s, keysOf) {
       // A hook or zip in progress lets go if either end of it is gone.
       s.hooks = s.hooks.filter((k) => k.o !== p.id && k.c !== p.id);
       s.zips = s.zips.filter((z) => z.o !== p.id && z.c !== p.id);
+      clearMarks(s, p.id);
       if (p.lives > 0) spawn(p);
     }
   }
@@ -1296,5 +1663,5 @@ export function step(s, keysOf) {
 
 // What everyone is sent each step. Short keys, because a phone's connection pays for every byte.
 export function snapshotOf(s) {
-  return { t: 's', k: s.tick, p: s.players, u: s.bullets, n: s.nets, gr: s.gifts, v: s.waves, c: s.crates, r: s.rocks, cl: s.clones, tp: s.traps, hk: s.hooks, dg: s.dogs, wl: s.walls, sm: s.storms, zs: s.zips, x: s.fx, o: s.over, w: s.win, pk: s.pick, m: s.map, ch: s.choice, h: s.host };
+  return { t: 's', k: s.tick, p: s.players, u: s.bullets, n: s.nets, gr: s.gifts, v: s.waves, c: s.crates, r: s.rocks, cl: s.clones, tp: s.traps, hk: s.hooks, dg: s.dogs, wl: s.walls, sm: s.storms, zs: s.zips, fl: s.falls, bi: s.bikes, kn: s.knives, vg: s.vacs, sn: s.screens.map((c) => c.hp), x: s.fx, o: s.over, w: s.win, pk: s.pick, m: s.map, ch: s.choice, h: s.host };
 }

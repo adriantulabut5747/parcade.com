@@ -217,11 +217,39 @@ a.key {
   --tone-ledge: #1c2a6e;
 }
 
-.tone-bulwark {
-  --tone: #ff93bf;
-  --tone-deep: #2d3f5c;
-  --tone-low: #6a84a8;
-  --tone-ledge: #2c3c55;
+.tone-aquilles {
+  --tone: #ffd35c;
+  --tone-deep: #5e2b12;
+  --tone-low: #c98a2a;
+  --tone-ledge: #6e3f12;
+}
+
+.tone-seedea {
+  --tone: #8fe6f4;
+  --tone-deep: #0f3f6e;
+  --tone-low: #1c7fc4;
+  --tone-ledge: #0f4f8a;
+}
+
+.tone-cassio {
+  --tone: #ff9a6a;
+  --tone-deep: #3a1a12;
+  --tone-low: #b92a18;
+  --tone-ledge: #6a1e10;
+}
+
+.tone-dextar {
+  --tone: #ff7a8c;
+  --tone-deep: #33101c;
+  --tone-low: #a81a30;
+  --tone-ledge: #5a0f1e;
+}
+
+.tone-vi {
+  --tone: #d9bcff;
+  --tone-deep: #2a1248;
+  --tone-low: #8a4fe0;
+  --tone-ledge: #4a2296;
 }
 
 .tone-illusionist {
@@ -879,7 +907,7 @@ body[data-screen='home'] #home,
   flex: 1.35 1 0;
   min-width: 0;
   display: grid;
-  grid-template-columns: repeat(6, 1fr);
+  grid-template-columns: repeat(7, 1fr);
   grid-template-rows: repeat(3, 1fr);
   gap: 10px;
 }
@@ -935,14 +963,16 @@ body[data-screen='home'] #home,
 }
 
 .tile-name {
-  padding: 5px 4px 7px;
+  padding: 5px 1px 7px;
   text-align: center;
-  font-family: var(--title);
+  /* Sora, because Tourney's K reads as an H this small: Ken looked like Hen. */
+  font-family: Sora, system-ui, sans-serif;
   font-style: italic;
-  font-weight: 900;
-  font-size: 12px;
+  font-weight: 800;
+  font-size: 10px;
   line-height: 1;
   text-transform: uppercase;
+  white-space: nowrap;
   color: var(--tone);
   -webkit-text-stroke: 2.5px var(--ink);
   paint-order: stroke fill;
@@ -1029,6 +1059,12 @@ body[data-screen='home'] #home,
   color: var(--tone);
   -webkit-text-stroke: 3px var(--ink);
   paint-order: stroke fill;
+}
+
+#detail-name small {
+  font-size: 0.5em;
+  color: #fff1b8;
+  -webkit-text-stroke-width: 2px;
 }
 
 #detail-skill {
@@ -1129,8 +1165,11 @@ body[data-screen='home'] #home,
 
 #map-cards {
   width: 100%;
+  flex: 1;
+  min-height: 0;
   display: grid;
-  grid-template-columns: repeat(4, 1fr);
+  grid-template-columns: repeat(3, 1fr);
+  grid-template-rows: repeat(2, minmax(0, 1fr));
   gap: 12px;
 }
 
@@ -1138,6 +1177,7 @@ body[data-screen='home'] #home,
   display: flex;
   flex-direction: column;
   min-width: 0;
+  min-height: 0;
   padding: 0 0 9px;
   overflow: hidden;
   color: var(--text);
@@ -1169,12 +1209,15 @@ body[data-screen='home'] #home,
 .map-art {
   position: relative;
   display: block;
-  aspect-ratio: 16 / 10;
+  flex: 1;
+  min-height: 0;
   border-bottom: 3px solid var(--ink);
   background: var(--panel-deep);
 }
 
 .map-art canvas {
+  position: absolute;
+  inset: 0;
   display: block;
   width: 100%;
   height: 100%;
@@ -1345,6 +1388,363 @@ body:not([data-screen='play']) #feed {
   font-size: 14px;
   font-weight: 600;
   color: var(--cream);
+}
+
+/* ---------- The campaign ---------- */
+
+#stop-end {
+  z-index: 25;
+  display: flex;
+  justify-content: center;
+  background: rgba(8, 7, 5, 0.66);
+}
+
+.end-panel {
+  width: min(100%, 680px);
+  display: flex;
+  align-items: center;
+  gap: 18px;
+  padding: 16px 20px;
+  border: 3px solid var(--ink);
+}
+
+#end-face {
+  width: 150px;
+  height: 150px;
+  flex: none;
+  border: 2px solid var(--ink);
+  border-radius: 14px;
+  background: #0b0a08;
+  box-shadow:
+    inset 0 3px 7px rgba(0, 0, 0, 0.6),
+    0 1px 0 rgba(255, 255, 255, 0.09);
+}
+
+.end-words {
+  min-width: 0;
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+#end-title {
+  font-size: clamp(26px, 4.4vw, 44px);
+  line-height: 1.05;
+  -webkit-text-stroke-width: 5px;
+}
+
+#end-text {
+  margin: 0;
+  font-size: 14.5px;
+  line-height: 1.45;
+  color: var(--text);
+}
+
+.end-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+
+body[data-mode='road'] .lives {
+  display: none !important;
+}
+
+body[data-screen='map'] #hud {
+  visibility: hidden;
+}
+
+body[data-screen='map'] #trail {
+  display: block;
+}
+
+#trail {
+  padding: 0;
+  overflow: hidden;
+  background: #060708;
+}
+
+#trail-scroll {
+  position: absolute;
+  inset: 0;
+  overflow-x: auto;
+  overflow-y: hidden;
+  touch-action: pan-x;
+  -webkit-overflow-scrolling: touch;
+  scrollbar-width: none;
+  cursor: grab;
+}
+
+#trail-scroll::-webkit-scrollbar {
+  display: none;
+}
+
+#trail-world {
+  position: relative;
+  height: 100%;
+}
+
+#trail-art {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  display: block;
+}
+
+.trail-region {
+  position: absolute;
+  top: max(58px, 14%);
+  transform: translateX(-50%);
+  padding: 2px 12px;
+  font-family: var(--title);
+  font-style: italic;
+  font-weight: 800;
+  font-size: clamp(14px, 3vh, 26px);
+  white-space: nowrap;
+  color: var(--cream);
+  -webkit-text-stroke: 4px var(--ink);
+  paint-order: stroke fill;
+  pointer-events: none;
+}
+
+.stop {
+  position: absolute;
+  width: 76px;
+  height: 76px;
+  padding: 0;
+  transform: translate(-50%, -50%);
+  display: grid;
+  place-items: center;
+  color: var(--cream);
+  font-family: var(--title);
+  font-style: italic;
+  font-weight: 900;
+  font-size: 26px;
+  border: 2px solid var(--ink);
+  border-radius: 50%;
+  background: linear-gradient(#322e25, #1f1c16);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 241, 184, 0.45),
+    inset 0 0 0 2px rgba(255, 211, 92, 0.3),
+    0 4px 0 #090806,
+    0 7px 12px rgba(0, 0, 0, 0.5);
+}
+
+button.stop {
+  cursor: pointer;
+}
+
+.stop canvas {
+  width: 88%;
+  height: 88%;
+  border-radius: 50%;
+  pointer-events: none;
+}
+
+.stop-road {
+  width: 42px;
+  height: 42px;
+  border-radius: 12px;
+}
+
+.stop-road svg {
+  width: 26px;
+  height: 26px;
+  pointer-events: none;
+}
+
+.stop-soon {
+  width: 50px;
+  height: 50px;
+  color: var(--muted);
+  background: #0b0a08;
+  box-shadow:
+    inset 0 3px 7px rgba(0, 0, 0, 0.6),
+    0 1px 0 rgba(255, 255, 255, 0.09);
+}
+
+.stop-tag {
+  position: absolute;
+  top: calc(100% + 5px);
+  left: 50%;
+  transform: translateX(-50%);
+  padding: 1px 7px;
+  font-family: 'Sora', sans-serif;
+  font-style: normal;
+  font-weight: 800;
+  font-size: 11.5px;
+  white-space: nowrap;
+  color: var(--text);
+  border: 2px solid var(--ink);
+  border-radius: 8px;
+  background: rgba(16, 15, 12, 0.92);
+  pointer-events: none;
+}
+
+.stop.beaten {
+  background: linear-gradient(#ffdf7c, #f2ae2c);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.6),
+    0 4px 0 #a2600d,
+    0 7px 12px rgba(0, 0, 0, 0.5);
+  color: #3a1c04;
+}
+
+.stop.current {
+  background: linear-gradient(#fff1b8, #ffd35c);
+  color: #3a1c04;
+  box-shadow:
+    inset 0 1px 0 #fff,
+    0 4px 0 #a2600d,
+    0 7px 12px rgba(0, 0, 0, 0.5);
+}
+
+/* Its own layer that only fades and grows, so it costs nothing to animate. */
+.stop.current::before {
+  content: '';
+  position: absolute;
+  inset: -9px;
+  border: 3px solid var(--gold);
+  border-radius: inherit;
+  animation: stop-call 1.3s ease-out infinite;
+  pointer-events: none;
+}
+
+@keyframes stop-call {
+  from {
+    transform: scale(0.9);
+    opacity: 1;
+  }
+  to {
+    transform: scale(1.22);
+    opacity: 0;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .stop.current::before {
+    animation: none;
+  }
+}
+
+.stop.locked {
+  color: var(--muted);
+  background: linear-gradient(#2a2822, #1a1814);
+}
+
+.stop.picked .stop-tag {
+  color: #3a1c04;
+  background: var(--gold);
+}
+
+.trail-top {
+  position: absolute;
+  top: max(8px, var(--safe-t));
+  left: max(10px, var(--safe-l));
+  right: max(10px, var(--safe-r));
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  pointer-events: none;
+}
+
+.trail-top > * {
+  pointer-events: auto;
+}
+
+.trail-top .title {
+  font-size: clamp(20px, 5.4vh, 38px);
+  -webkit-text-stroke-width: 5px;
+}
+
+#trail-panel {
+  position: absolute;
+  left: max(10px, var(--safe-l));
+  right: max(10px, var(--safe-r));
+  bottom: max(8px, var(--safe-b));
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding: 8px 14px;
+  border: 3px solid var(--ink);
+  border-radius: 16px;
+}
+
+.trail-words {
+  min-width: 0;
+  flex: 1;
+}
+
+#trail-name {
+  margin: 0;
+  font-family: var(--title);
+  font-style: italic;
+  font-weight: 800;
+  font-size: clamp(14px, 3.6vh, 22px);
+  color: var(--gold);
+}
+
+#trail-text {
+  margin: 2px 0 0;
+  font-size: clamp(11px, 2.3vh, 14px);
+  line-height: 1.35;
+  color: var(--text);
+}
+
+.trail-as-box {
+  flex: none;
+  max-width: 30%;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+#trail-as {
+  display: flex;
+  gap: 4px;
+  padding: 3px;
+  overflow-x: auto;
+  scrollbar-width: none;
+}
+
+.as-hero {
+  width: 42px;
+  height: 42px;
+  flex: none;
+  padding: 1px;
+  cursor: pointer;
+  border: 2px solid var(--ink);
+  border-radius: 9px;
+  background: transparent;
+}
+
+.as-hero canvas {
+  width: 100%;
+  height: 100%;
+  display: block;
+  pointer-events: none;
+}
+
+.as-hero.on {
+  background: linear-gradient(#ffdf7c, #f2ae2c);
+}
+
+#trail-go {
+  flex: none;
+  min-width: 112px;
+  padding: 12px 22px;
+  font-size: 18px;
+}
+
+#trail-go:disabled {
+  --face: #2a2822;
+  --face-low: #1a1814;
+  --ledge: #090806;
+  --key-text: var(--muted);
+  cursor: default;
 }
 
 #pick-note {
@@ -1874,10 +2274,6 @@ body:not([data-screen='play']) #feed {
     gap: 8px;
   }
 
-  .map-art {
-    aspect-ratio: 16 / 8;
-  }
-
   .map-name {
     margin-top: 4px;
     font-size: 11px;
@@ -1965,7 +2361,13 @@ body:not([data-screen='play']) #feed {
     -webkit-text-stroke-width: 2.5px;
   }
 
-  #detail-skill {
+  #detail-name small {
+  font-size: 0.5em;
+  color: #fff1b8;
+  -webkit-text-stroke-width: 2px;
+}
+
+#detail-skill {
     font-size: 12px;
   }
 

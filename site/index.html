@@ -127,13 +127,50 @@
       <p id="results-next"></p>
     </section>
 
+    <section id="stop-end" class="overlay" aria-label="Area finished" hidden>
+      <div class="end-panel box">
+        <canvas id="end-face" width="180" height="180"></canvas>
+        <div class="end-words">
+          <h2 id="end-title" class="title"></h2>
+          <p id="end-text"></p>
+          <div class="end-actions">
+            <button id="end-map" class="key" type="button">Map</button>
+            <button id="end-next" class="key key-gold" type="button"></button>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <section id="trail" class="overlay" aria-label="Campaign map">
+      <div id="trail-scroll">
+        <div id="trail-world"><canvas id="trail-art"></canvas></div>
+      </div>
+      <div class="trail-top">
+        <a class="key key-small" href="./">Home</a>
+        <h1 class="title">Campaign</h1>
+        <span id="trail-count" class="well room-chip"></span>
+      </div>
+      <div id="trail-panel" class="box">
+        <div class="trail-words">
+          <h2 id="trail-name"></h2>
+          <p id="trail-text"></p>
+        </div>
+        <div class="trail-as-box">
+          <span id="trail-as-label" class="setup-label">Fight as</span>
+          <div id="trail-as" class="well"></div>
+        </div>
+        <button id="trail-go" class="key key-gold key-big" type="button"></button>
+      </div>
+    </section>
+
     <section id="home" class="overlay" aria-label="Start a game">
       <h1 class="title logo">Parcade</h1>
       <div class="home-panel box">
         <div id="home-start" class="home-start">
-        <p class="tagline">Knock everyone off the platforms. 16 heroes, 3 maps, up to 4 players, 3 lives each.</p>
+        <p class="tagline">Knock everyone off the platforms. 20 heroes, 5 maps, up to 4 players, 5 lives each.</p>
         <div class="home-row">
-          <button id="create" class="key key-gold key-big" type="button">Create room</button>
+          <button id="campaign-open" class="key key-gold key-big" type="button">Campaign</button>
+          <button id="create" class="key key-big" type="button">PvP room</button>
           <button id="practice-open" class="key key-big" type="button">Practice</button>
         <form id="join">
           <label for="join-code">Got a code?</label>

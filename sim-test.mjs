@@ -1,7 +1,27 @@
 // Checks the game rules. Run: node sim-test.mjs
 import assert from 'node:assert/strict';
 import {
+  BIKE_SLOW,
+  BIKE_STEPS,
+  BIKE_STUN,
+  BLINK_STUN,
   BLIND_STEPS,
+  CASSIO,
+  DEXTAR,
+  FALL_NEAR,
+  FALL_STEPS,
+  FALL_W,
+  MARK_STEPS,
+  PW,
+  SCREEN_BACK,
+  SCREEN_HP,
+  SEEDEA,
+  STEPS_PER_SEC,
+  VAC_RADIUS,
+  VAC_SLOW,
+  VAC_STEPS,
+  VI,
+  inFall,
   DASH_CD,
   DECOY_STEPS,
   DID,
@@ -17,13 +37,14 @@ import {
   ANGLER,
   ARC,
   MAPS,
+  PVP_MAPS,
   RIME,
   SHADE,
   TETHER,
   VANISH_STEPS,
   chooseMap,
   snapshotOf,
-  BULWARK,
+  AQUILLES,
   DOG_HP,
   GUARD_STEPS,
   HANDLER,
@@ -231,7 +252,7 @@ assert.equal(late.hero, NINJA);
 assert.equal(late.lives, LIVES);
 
 // Every hero's cooldown, as agreed.
-assert.deepEqual(SKILL_CD, [750, 450, 600, 750, 600, 450, 750, 600, 600, 450, 600, 750, 450, 750, 600, 750]);
+assert.deepEqual(SKILL_CD, [750, 450, 600, 750, 600, 450, 750, 600, 600, 450, 600, 750, 450, 750, 600, 750, 600, 750, 600, 600]);
 
 // Sniper: 5 bullets, and using it again refills to 5 rather than adding.
 [s, a, b] = match(SNIPER, TRAPPER);
@@ -536,12 +557,12 @@ run(s, 1);
 assert.ok(Math.abs(b.vx - 12) < 1.5, `knockback is 1.2x, got ${b.vx}`);
 
 // Bulwark: blocks bullets for 4 s, and whoever touches her flies back at twice a pistol hit.
-[s, a, b] = match(BULWARK, SNIPER);
+[s, a, b] = match(AQUILLES, SNIPER);
 onMain(a, 400);
 onMain(b, 600);
 assert.equal(press(a) & DID.GUARD, DID.GUARD);
 assert.equal(a.gd, GUARD_STEPS - 1);
-assert.equal(a.cd, SKILL_CD[BULWARK] - 1);
+assert.equal(a.cd, SKILL_CD[AQUILLES] - 1);
 s.bullets.push({ id: 951, x: 370, y: a.y - 18, vx: 18, vy: 0, o: 1, t: 5, k: 17, g: PISTOL });
 run(s, 2);
 assert.ok(Math.abs(a.vx) < 1, `guard stops the bullet, got ${a.vx}`);
@@ -552,7 +573,7 @@ assert.ok(b.vx > 15 && b.vx < 25, `touching her throws you back, but no harder t
 const thrown = b.vx;
 run(s, 1);
 assert.ok(b.vx <= thrown, 'only one shove per touch');
-[s, a, b] = match(BULWARK, SNIPER);
+[s, a, b] = match(AQUILLES, SNIPER);
 onMain(a, 400);
 Object.assign(onMain(b, 420));
 run(s, 2);
@@ -705,7 +726,7 @@ for (let x = 340; x < 400; x += 7) {
   assert.equal(b.hk, 0, `hook went through a wall at ${x}`);
 }
 // A guard blocks it and a clone wastes it.
-[s, a, b] = match(ANGLER, BULWARK);
+[s, a, b] = match(ANGLER, AQUILLES);
 onMain(a, 300);
 onMain(b, 400);
 a.f = 1;
@@ -1270,8 +1291,9 @@ assert.equal(a.kos, 1, 'an old hit no longer counts');
 startRound(s);
 assert.equal(a.kos + a.hits + b.falls, 0, 'a new round starts clean');
 
-// Maps: three of them, every platform reachable from the one below, with a spawn over a platform.
-assert.equal(MAPS.length, 3);
+// Maps: every platform reachable from the one below, with a spawn over a platform.
+assert.equal(MAPS.length, 7);
+assert.equal(PVP_MAPS, 5);
 for (const map of MAPS) {
   for (const x of map.spawn) assert.ok(map.platforms.some((pl) => x > pl.x && x < pl.x + pl.w), `${map.name}: spawn at ${x} has a floor`);
   const lowest = Math.max(...map.platforms.map((pl) => pl.y));
@@ -1314,7 +1336,9 @@ for (let i = 0; i < 40; i++) {
   startRound(s);
   seen.add(s.map);
 }
-assert.equal(seen.size, MAPS.length, 'random covers every map');
+assert.equal(seen.size, PVP_MAPS, 'random covers every PvP map, and never a campaign one');
+chooseMap(s, 0, PVP_MAPS);
+assert.equal(s.choice, null, 'rooms cannot choose a campaign map');
 s.pick = 100;
 chooseMap(s, 1, 2);
 assert.equal(s.choice, null, 'only the host');
@@ -1447,6 +1471,441 @@ assert.ok(b.fz > FREEZE_STEPS - 10, 'frozen');
 [s, a] = match(SNIPER);
 a.fz = 100;
 assert.ok(topSpeed(a) < baseRun * 0.25, 'very hard slow');
+
+{
+let c;
+
+// ---------- Seedea, Cassio, Dextar, VI and the two new maps ----------
+const onMap = (s, m) => {
+  s.choice = m;
+  startRound(s);
+  s.drop = 1e9;
+};
+
+// Seedea: a waterfall for 7 s that stops every bullet from both sides, her own too, and can't be worn down.
+[s, a, b] = match(SEEDEA, SNIPER);
+assert.equal(SKILL_CD[SEEDEA], 20 * STEPS_PER_SEC);
+onMain(a, 300);
+onMain(b, 560);
+a.f = 1;
+b.f = -1;
+s.fx = [];
+run(s, 1, skill(0));
+assert.equal(s.falls.length, 1);
+assert.equal(s.falls[0].t, FALL_STEPS - 1);
+assert.ok(s.falls[0].x > a.x, 'it stands in front of her');
+assert.equal(a.cd, SKILL_CD[SEEDEA]);
+const fallX = s.falls[0].x;
+for (let i = 0; i < 30; i++) step(s, shooter(1));
+assert.equal(s.bullets.filter((u) => u.x < fallX - FALL_W).length, 0, 'an enemy bullet never gets past it');
+assert.ok(Math.abs(a.vx) < 1, `nothing reached her, vx ${a.vx}`);
+for (let i = 0; i < 20; i++) step(s, shooter(0));
+assert.equal(s.bullets.filter((u) => u.o === 0 && u.x > fallX + FALL_W).length, 0, 'her own bullets stop too');
+assert.ok(s.falls.length === 1, 'bullets never wear it down');
+assert.ok(Math.abs(b.vx) < 3, 'her shots did not reach the other side');
+
+// A beam stops at it, and a rocket goes off on it.
+[s, a, b] = match(SEEDEA, SNIPER);
+onMain(a, 300);
+onMain(b, 560);
+a.f = 1;
+b.f = -1;
+run(s, 1, skill(0));
+Object.assign(b, { gun: LASER, ammo: 6, c: 0 });
+run(s, 1, shooter(1));
+assert.ok(Math.abs(a.vx) < 1, 'a laser stops at the water');
+assert.equal(s.falls.length, 1);
+Object.assign(b, { gun: ROCKET, ammo: 3, c: 0 });
+run(s, 2, shooter(1));
+run(s, 20);
+assert.equal(s.bullets.length, 0, 'the rocket blew up on the water');
+
+// It's gone after 7 s, and the cooldown keeps counting through it.
+run(s, FALL_STEPS);
+assert.equal(s.falls.length, 0);
+
+// Going near it carries anyone up, enemy or owner, then throws them out of the top and clear of the water.
+[s, a, b] = match(SEEDEA, SNIPER);
+onMain(a, 300);
+a.f = 1;
+run(s, 1, skill(0));
+onMain(b, s.falls[0].x - FALL_W / 2 - PW / 2 - FALL_NEAR + 2);
+b.f = -1;
+const startY = b.y;
+run(s, 6);
+assert.ok(b.y < startY && b.vy < 0, 'near the water counts, not only in it');
+let lowest = 1e9;
+let launchedAt = -1;
+s.fx = [];
+for (let i = 0; i < 60 && launchedAt < 0; i++) {
+  step(s, none);
+  lowest = Math.min(lowest, b.y);
+  if (s.fx.some((f) => f.k === 'launch' && f.id === 1)) launchedAt = i;
+  s.fx = [];
+}
+assert.ok(launchedAt >= 0, 'thrown out of the top');
+assert.ok(b.y < 90, `thrown from above every platform, at y ${b.y}`);
+assert.ok(b.vy < -10 && b.vx < -5, `thrown upward and out to the side, vy ${b.vy} vx ${b.vx}`);
+assert.ok(b.j >= 1, 'with a jump left to steer');
+const x0 = b.x;
+run(s, 12);
+assert.ok(Math.abs(b.x - x0) > 40 && !inFall(s.falls, b.x), 'clear of the water');
+// Someone away from it isn't touched.
+[s, a, b] = match(SEEDEA, SNIPER);
+onMain(a, 300);
+onMain(b, 650);
+a.f = 1;
+run(s, 1, skill(0));
+run(s, 20);
+assert.equal(b.y, PLATFORMS[0].y);
+// The browser predicts the same ride from the same inputs.
+const ridden = { ...b, x: s.falls[0].x, y: 300, vx: 0, vy: 0, g: false, lu: 0 };
+const predicted = { ...ridden };
+movePlayer(ridden, 0, [], s.falls);
+movePlayer(predicted, 0, [], [...s.falls]);
+assert.equal(ridden.y, predicted.y);
+assert.ok(ridden.vy < 0, 'the shared movePlayer does the lifting');
+
+// Cassio: on the bike for 8 s, much faster, and it costs the 25 s cooldown once.
+[s, a, b] = match(CASSIO, SNIPER);
+assert.equal(SKILL_CD[CASSIO], 25 * STEPS_PER_SEC);
+onMain(a, 300);
+onMain(b, 600);
+b.gd = 1e6;
+a.f = 1;
+press(a);
+assert.equal(a.bk, BIKE_STEPS - 1);
+assert.equal(a.cd, SKILL_CD[CASSIO] - 1);
+const walker = { ...a, bk: 0, x: 300, y: PLATFORMS[0].y, vx: 0, g: true };
+const rider = { ...a, bk: 100, x: 300, y: PLATFORMS[0].y, vx: 0, g: true };
+for (let i = 0; i < 20; i++) {
+  movePlayer(walker, KEY.RIGHT);
+  movePlayer(rider, KEY.RIGHT);
+}
+assert.ok(rider.x - 300 > (walker.x - 300) * 1.7, `the bike is a lot faster, ${rider.x - 300} against ${walker.x - 300}`);
+// It runs out by itself after 8 s.
+const parked = { ...a, bk: 2 };
+movePlayer(parked, 0);
+movePlayer(parked, 0);
+assert.equal(parked.bk, 0);
+
+// The second press doesn't wait for the cooldown. The bike flies flat, and whoever it hits is stunned 1.5 s, then slowed 1 s.
+[s, a, b] = match(CASSIO, SNIPER);
+onMain(a, 300);
+onMain(b, 600);
+a.f = 1;
+b.f = -1;
+run(s, 1, skill(0));
+assert.ok(a.bk > 0);
+run(s, 2);
+run(s, 1, skill(0));
+assert.equal(a.bk, 0, 'throwing it gets him off it');
+assert.equal(s.bikes.length, 1);
+const flyY = s.bikes[0].y;
+s.fx = [];
+for (let i = 0; i < 20 && s.bikes.length; i++) {
+  step(s, none);
+  assert.ok(!s.bikes.length || s.bikes[0].y === flyY, 'it flies level');
+}
+assert.equal(s.bikes.length, 0);
+assert.ok(b.hk > BIKE_STUN - 15 && b.hk <= BIKE_STUN, `stunned, ${b.hk}`);
+assert.equal(b.lh, 0, 'the KO would be his');
+assert.equal(b.ss - b.hk, BIKE_SLOW, 'the slow outlasts the stun by 1 s');
+const stunnedX = b.x;
+run(s, 10, () => KEY.LEFT);
+assert.ok(Math.abs(b.x - stunnedX) < 3, 'can\'t walk while stunned');
+b.hk = 0;
+const slowed = { ...b, ss: 10, x: 500, vx: 0, g: true, y: PLATFORMS[0].y };
+const free = { ...slowed, ss: 0 };
+for (let i = 0; i < 8; i++) {
+  movePlayer(slowed, KEY.RIGHT);
+  movePlayer(free, KEY.RIGHT);
+}
+assert.ok(slowed.x - 500 < (free.x - 500) * 0.65, 'then slowed');
+// A guard stops the bike, and it pops a clone.
+[s, a, b] = match(CASSIO, AQUILLES);
+onMain(a, 300);
+onMain(b, 600);
+a.f = 1;
+b.gd = 100;
+a.bk = 50;
+run(s, 1, skill(0));
+run(s, 20);
+assert.equal(b.hk, 0, 'the guard held');
+assert.equal(s.bikes.length, 0);
+
+// Dextar: a big knife, long reach. Hitting marks them for 5 s.
+[s, a, b] = match(DEXTAR, SNIPER);
+assert.equal(SKILL_CD[DEXTAR], 20 * STEPS_PER_SEC);
+s.choice = 0;
+onMain(a, 280);
+onMain(b, 680);
+a.f = 1;
+b.f = 1;
+run(s, 1, skill(0));
+assert.equal(s.knives.length, 1);
+assert.equal(a.cd, SKILL_CD[DEXTAR]);
+run(s, 20);
+assert.equal(s.knives.length, 0);
+assert.equal(a.mk, 1);
+assert.ok(a.mr > MARK_STEPS - 20 && a.mr <= MARK_STEPS);
+assert.equal(b.vx, 0, 'the knife marks, it doesn\'t shove');
+// A second press lands him behind them, stunned for 1.5 s, with the cooldown still running.
+const cdBefore = a.cd;
+Object.assign(b, { f: 1 });
+run(s, 1, skill(0));
+assert.equal(a.mr, 0);
+assert.equal(a.mk, -1);
+assert.ok(Math.abs(a.x - (b.x - 30)) < 8, `behind them, at ${a.x} with them at ${b.x}`);
+assert.equal(a.y, b.y);
+assert.equal(a.f, 1, 'facing their back');
+assert.ok(b.hk >= BLINK_STUN - 1 && b.hk <= BLINK_STUN);
+assert.equal(b.lh, 0);
+assert.ok(a.cd < cdBefore, 'no second go on the cooldown');
+assert.equal(a.cd > 0, true);
+
+// Range: much longer than a pistol's reach of 720, right across the arena.
+[s, a, b] = match(DEXTAR, SNIPER);
+onMain(a, 40);
+Object.assign(b, { x: 40 + 900, y: PLATFORMS[0].y, vy: 0, g: true, i: 0 });
+a.y = b.y;
+a.f = 1;
+for (let i = 0; i < 35; i++) {
+  a.y = b.y = PLATFORMS[0].y;
+  a.vy = b.vy = 0;
+  step(s, i ? none : skill(0));
+}
+assert.equal(a.mk, 1, 'reaches 900 away');
+
+// The mark runs out after 5 s, and a press then costs a normal cooldown check.
+[s, a, b] = match(DEXTAR, SNIPER);
+onMain(a, 300);
+onMain(b, 600);
+a.f = 1;
+run(s, 1, skill(0));
+run(s, 15);
+assert.equal(a.mk, 1);
+run(s, MARK_STEPS);
+assert.equal(a.mr, 0);
+const xBefore = a.x;
+run(s, 1, skill(0));
+assert.equal(a.x, xBefore, 'no teleport once the mark has run out');
+assert.equal(s.knives.length, 0, 'and no free knife on cooldown');
+
+// The mark goes when they lose a life, and a guard stops the stun but not the teleport.
+[s, a, b] = match(DEXTAR, SNIPER);
+onMain(a, 300);
+onMain(b, 600);
+a.f = 1;
+run(s, 1, skill(0));
+run(s, 15);
+assert.equal(a.mk, 1);
+b.y = 5000;
+run(s, 1);
+assert.equal(a.mk, -1);
+assert.equal(a.mr, 0);
+[s, a, b] = match(DEXTAR, AQUILLES);
+onMain(a, 300);
+onMain(b, 600);
+a.f = 1;
+run(s, 1, skill(0));
+run(s, 15);
+assert.equal(a.mk, 1);
+b.gd = 100;
+run(s, 1, skill(0));
+assert.equal(b.hk, 0, 'the guard stopped the stun');
+assert.ok(Math.abs(a.x - b.x) < 40, 'but he still arrived');
+// A guard stops the knife itself, so no mark.
+[s, a, b] = match(DEXTAR, AQUILLES);
+onMain(a, 300);
+onMain(b, 600);
+a.f = 1;
+b.gd = 100;
+run(s, 1, skill(0));
+run(s, 15);
+assert.equal(a.mk, -1);
+// It also stops at a waterfall.
+[s, a, b, c] = match(DEXTAR, SNIPER, SEEDEA);
+onMain(a, 280);
+onMain(b, 640);
+onMain(c, 275);
+a.f = 1;
+s.falls.push({ id: 99, o: 2, x: 470, t: 100 });
+run(s, 1, skill(0));
+run(s, 20);
+assert.equal(a.mk, -1, 'a knife can\'t cross water');
+
+// VI: a grenade that opens when it lands. Enemies in reach are dragged to the middle, up or down as well as across, and slowed 2 s.
+[s, a, b, c] = match(VI, SNIPER, SNIPER);
+assert.equal(SKILL_CD[VI], 20 * STEPS_PER_SEC);
+onMain(a, 300);
+onMain(b, 660);
+c.y = 5000;
+c.lives = 1;
+run(s, 1);
+a.f = 1;
+run(s, 1, skill(0));
+assert.equal(s.vacs.length, 1);
+assert.equal(s.vacs[0].open, false);
+let guard = 0;
+while (!s.vacs[0].open && guard++ < 60) step(s, none);
+assert.equal(s.vacs[0].open, true, 'it opens on the floor');
+const v = s.vacs[0];
+assert.equal(v.y, PLATFORMS[0].y);
+assert.ok(v.x > a.x + 150, `thrown well ahead, ${v.x - a.x}`);
+assert.ok(Math.abs(b.x - v.x) < VAC_RADIUS, 'b is in reach');
+const farBefore = Math.abs(b.x - v.x);
+run(s, 10);
+assert.ok(Math.abs(b.x - v.x) < farBefore - 40, 'being dragged in');
+assert.equal(b.lh, 0);
+assert.ok(b.ss >= VAC_SLOW - 1, 'and slowed');
+run(s, VAC_STEPS);
+assert.equal(s.vacs.length, 0, 'it closes');
+assert.ok(Math.abs(b.x - v.x) < 20, `ends in the middle, ${Math.abs(b.x - v.x)} away`);
+assert.ok(b.ss > 0 && b.ss <= VAC_SLOW);
+assert.ok(Math.abs(a.vx) < 1, 'its owner isn\'t pulled');
+
+// Someone above it is dragged down, and someone outside its reach isn't touched at all.
+[s, a, b] = match(VI, SNIPER);
+onMain(a, 300);
+s.vacs.push({ id: 90, o: 0, x: 400, y: PLATFORMS[0].y, vx: 0, vy: 0, t: 20, open: true, hit: [] });
+Object.assign(b, { x: 420, y: 250, vx: 0, vy: 0, i: 0, g: false });
+const yBefore = b.y;
+run(s, 6);
+assert.ok(b.y > yBefore + 20, 'vertical counts too');
+[s, a, b] = match(VI, SNIPER);
+onMain(a, 300);
+onMain(b, 400 + VAC_RADIUS + 40 > 690 ? 680 : 400 + VAC_RADIUS + 40);
+s.vacs.push({ id: 91, o: 0, x: 280, y: PLATFORMS[0].y, vx: 0, vy: 0, t: 20, open: true, hit: [] });
+const outX = b.x;
+run(s, 10);
+assert.equal(b.x, outX, 'outside the reach');
+assert.equal(b.ss, 0);
+// A guard or a shield keeps you out of it, and a shield pays one hit for that.
+[s, a, b] = match(VI, SNIPER);
+onMain(a, 300);
+onMain(b, 480);
+b.sh = 2;
+b.shT = 100;
+s.vacs.push({ id: 92, o: 0, x: 360, y: PLATFORMS[0].y, vx: 0, vy: 0, t: 20, open: true, hit: [] });
+const shieldX = b.x;
+run(s, 10);
+assert.equal(b.sh, 1);
+assert.equal(b.x, shieldX);
+// A throw off the map just falls and is gone.
+[s, a, b] = match(VI, SNIPER);
+Object.assign(a, { x: 900, y: 100, vx: 0, vy: 0, i: 0, f: 1, g: false });
+run(s, 1, skill(0));
+run(s, 70, () => 0);
+assert.equal(s.vacs.length, 0);
+
+// Hero text and icons have to keep up with the list.
+assert.equal(HERO_COUNT, 20);
+assert.equal(SKILL_CD.length, HERO_COUNT);
+
+// Hidden Dojo: 3 shots tear a paper screen, it stands again after 10 s, and only then does it stop bullets again.
+[s, a, b] = match(SNIPER, SNIPER);
+onMap(s, 4);
+const paper = s.screens[0];
+assert.equal(s.screens.length, 4);
+assert.equal(paper.hp, SCREEN_HP);
+Object.assign(a, { x: paper.x - 60, y: paper.y, vx: 0, vy: 0, g: true, i: 0, c: 0, f: 1, gun: PISTOL });
+Object.assign(b, { x: paper.x + 60, y: paper.y, vx: 0, vy: 0, g: true, i: 0, c: 0, f: -1 });
+for (let n = 0; n < SCREEN_HP; n++) {
+  a.c = 0;
+  run(s, 1, shooter(0));
+  run(s, 8);
+  assert.equal(paper.hp, SCREEN_HP - n - 1);
+  assert.ok(Math.abs(b.vx) < 1, 'the shot stopped at the paper');
+  Object.assign(a, { x: paper.x - 60, vx: 0 });
+}
+assert.equal(paper.hp, 0);
+assert.ok(s.fx.some((f) => f.k === 'papertear'));
+a.c = 0;
+run(s, 1, shooter(0));
+run(s, 8);
+assert.ok(Math.abs(b.vx) > 5, `torn paper lets bullets through, vx ${b.vx}`);
+Object.assign(b, { x: paper.x + 60, y: paper.y, vx: 0, vy: 0, g: true });
+run(s, SCREEN_BACK + 2);
+assert.equal(paper.hp, SCREEN_HP, 'patched up after 10 s');
+const snap = snapshotOf(s);
+assert.deepEqual(snap.sn, [SCREEN_HP, SCREEN_HP, SCREEN_HP, SCREEN_HP]);
+// A blast tears it outright, and every round starts with them whole.
+s.screens[1].hp = 2;
+Object.assign(a, { x: s.screens[1].x - 40, y: s.screens[1].y, vx: 0, vy: 0, i: 0, g: true, f: 1, gun: ROCKET, ammo: 3, c: 0 });
+run(s, 2, shooter(0));
+run(s, 2);
+assert.equal(s.screens[1].hp <= 0, true);
+startRound(s);
+assert.ok(s.screens.every((c) => c.hp === SCREEN_HP));
+// Other maps have none.
+onMap(s, 0);
+assert.equal(s.screens.length, 0);
+assert.deepEqual(snapshotOf(s).sn, []);
+
+// A beam tears paper too, and a knife stops at it.
+[s, a, b] = match(SNIPER, SNIPER);
+onMap(s, 4);
+const screen2 = s.screens[0];
+Object.assign(a, { x: screen2.x - 60, y: screen2.y, vx: 0, vy: 0, g: true, i: 0, c: 0, f: 1, gun: LASER, ammo: 6 });
+Object.assign(b, { x: screen2.x + 60, y: screen2.y, vx: 0, vy: 0, g: true, i: 0, f: -1 });
+run(s, 1, shooter(0));
+assert.equal(screen2.hp, SCREEN_HP - 1);
+assert.ok(Math.abs(b.vx) < 1, 'the beam stopped there');
+
+// The doors: walking into one puts you at the other, keeps you moving, and won't send you straight back.
+[s, a] = match(SNIPER);
+onMap(s, 4);
+const [doorA, doorB] = MAPS[4].doors;
+s.fx = [];
+Object.assign(a, { x: doorA.x + 30, y: doorA.y, vx: 0, vy: 0, g: true, i: 0, f: -1, j: 2 });
+let through = false;
+for (let i = 0; i < 20 && !through; i++) {
+  step(s, () => KEY.LEFT);
+  through = a.y === doorB.y && Math.abs(a.x - doorB.x) < 20;
+}
+assert.ok(through, 'came out of the other door');
+assert.ok(s.fx.some((f) => f.k === 'door'), 'with its effect');
+assert.equal(a.g, true);
+// It leaves you walking in the same direction, onto the floor, not back through.
+const keptWalking = a.x;
+run(s, 12, () => KEY.LEFT);
+assert.ok(a.x < keptWalking - 40 && a.y === doorB.y, 'walks away from the far door');
+// Standing in a door does nothing, however long you wait.
+Object.assign(a, { x: doorB.x, y: doorB.y, vx: 0, vy: 0, g: true, dr: 0 });
+run(s, 90);
+assert.equal(a.x, doorB.x);
+assert.equal(a.y, doorB.y);
+// Walking back in the other way works once the lock is off, and the lock really stops a quick return.
+Object.assign(a, { x: doorB.x - 20, y: doorB.y, vx: 0, vy: 0, g: true, dr: 30 });
+run(s, 8, () => KEY.RIGHT);
+assert.equal(a.y, doorB.y, 'locked for a moment');
+Object.assign(a, { x: doorB.x - 20, y: doorB.y, vx: 0, vy: 0, g: true, dr: 0 });
+for (let i = 0; i < 10 && a.y === doorB.y; i++) step(s, () => KEY.RIGHT);
+assert.equal(a.y, doorA.y, 'back the other way');
+// Knocked into a door by a shot, nothing happens: only your own feet count.
+const knocked = { ...a, x: doorA.x + 20, y: doorA.y, vx: -8, vy: 0, g: true, dr: 0 };
+for (let i = 0; i < 5; i++) movePlayer(knocked, 0);
+assert.equal(knocked.y, doorA.y);
+// The browser's prediction goes through a door too, since it's in the same movePlayer. Other maps have none.
+useMap(0);
+const noDoor = { ...a, x: doorA.x, y: doorA.y, vx: 0, vy: 0, g: true, dr: 0 };
+movePlayer(noDoor, KEY.LEFT);
+assert.ok(noDoor.y >= doorA.y, 'this map has no door to come out of');
+useMap(s.map);
+
+// Every map's doors stand on a floor, inside its width, and every screen does too.
+for (const map of MAPS) {
+  for (const d of [...(map.doors ?? []), ...(map.screens ?? [])]) {
+    assert.ok(map.platforms.some((pl) => pl.y === d.y && d.x > pl.x && d.x < pl.x + pl.w), `${map.name}: ${d.x},${d.y} has a floor`);
+  }
+}
+
+// New maps don't reuse an old layout.
+const layout = (m) => m.platforms.map((pl) => `${pl.x},${pl.y},${pl.w}`).sort().join('|');
+assert.equal(new Set(MAPS.map(layout)).size, MAPS.length);
+
+}
 
 // Every melody must fill its chords exactly, or the music drifts out of step with itself on each loop.
 const { SONGS } = await import('./site/audio.js');

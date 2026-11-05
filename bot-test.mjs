@@ -2,7 +2,7 @@
 import assert from 'node:assert/strict';
 import { ACTIONS, LEVELS, botKeys, guess, navFor, newBrain, newWatcher, observe } from './site/bot.js';
 import { createPractice } from './site/practice.js';
-import { ALL_KEYS, ANGLER, BULWARK, GUNS, HERO_COUNT, ILLUSIONIST, KEY, MAPS, MOSSBACK, NINJA, PISTOL, STEPS_PER_SEC, TETHER, addPlayer, muzzleY, newGame, startRound, step, useMap } from './site/sim.js';
+import { ALL_KEYS, ANGLER, AQUILLES, GUNS, HERO_COUNT, ILLUSIONIST, KEY, MAPS, MOSSBACK, NINJA, PISTOL, STEPS_PER_SEC, TETHER, addPlayer, muzzleY, newGame, startRound, step, useMap } from './site/sim.js';
 
 const report = process.argv.includes('report');
 const say = (...a) => report && console.log(...a);
@@ -35,7 +35,7 @@ for (const m of MAPS) {
 for (const name of NAMES) {
   let falls = 0;
   const seconds = 60;
-  for (const map of [0, 1, 2]) {
+  for (const map of MAPS.keys()) {
     const s = match([{ id: 0, hero: 0 }, { id: 1, hero: 8 }], map);
     const b = newBrain(1, LEVELS[name]);
     const dummy = s.players[0];
@@ -61,7 +61,7 @@ for (const name of NAMES) {
 function hitRate(name, gunIndex = PISTOL) {
   let shots = 0;
   let hits = 0;
-  for (const map of [0, 1, 2]) {
+  for (const map of MAPS.keys()) {
     for (let round = 0; round < 6; round++) {
       const s = match([{ id: 0, hero: 7 }, { id: 1, hero: 11 }], map);
       const b = newBrain(1, LEVELS[name]);
@@ -125,7 +125,7 @@ function blocks(name, hero) {
   }
   return used / tries;
 }
-for (const hero of [BULWARK, ILLUSIONIST, MOSSBACK]) {
+for (const hero of [AQUILLES, ILLUSIONIST, MOSSBACK]) {
   const hard = blocks('hard', hero);
   const easy = blocks('easy', hero);
   say(`hero ${hero} blocks a close shot: hard ${hard}, easy ${easy}`);
@@ -189,7 +189,8 @@ function duel(upper, lower, rounds) {
     const heroes = [pick(HERO_COUNT), pick(HERO_COUNT)];
     const s = match([{ id: 0, hero: heroes[0] }, { id: 1, hero: heroes[1] }]);
     const brains = [newBrain(0, LEVELS[upper], -1), newBrain(1, LEVELS[lower], -1)];
-    for (let t = 0; t < 180 * STEPS_PER_SEC && !s.over; t++) {
+    // 5 lives take longer than the 3 this was first measured at.
+    for (let t = 0; t < 300 * STEPS_PER_SEC && !s.over; t++) {
       step(s, (id) => botKeys(s, brains[id]));
       s.fx = [];
     }
