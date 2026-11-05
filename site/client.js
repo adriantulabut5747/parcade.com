@@ -2,8 +2,10 @@
 // them against the server. Other players are drawn slightly in the past so they move smoothly.
 import * as Art from './art.js';
 import { isMusicOn, isMuted, play, setMusicOn, setMuted, setQuiet, setSong, unlockAudio } from './audio.js';
+import { LEVELS } from './bot.js';
 import * as Fx from './fx.js';
 import { drawHero, setSpriteScale, stampHero } from './heroes.js';
+import { createPractice, isLevel } from './practice.js';
 import { BLIND_STEPS, BULWARK, DASH_CD, DECOY_STEPS, DID, DUSK, GUNS, GUN_SHIFT, HANDLER, HERO_COUNT, ILLUSIONIST, KEY, LIVES, MAPS, MOSSBACK, NINJA, PICK_STEPS, PISTOL, PLATFORMS, SHADE, SHIFTER, SKILL_CD, SNIPER, SNIPER_GUN, SPRINTER, STEPS_PER_SEC, W, addPlayer, movePlayer, newGame, padKeys, snapshotOf, startRound, step, stickKeys, useMap } from './sim.js';
 
 const SERVER = location.port === '8766' ? `ws://${location.hostname}:8787` : 'wss://parcade.adriantulabut5747.workers.dev';
@@ -86,6 +88,11 @@ const upright = matchMedia('(pointer: coarse) and (orientation: portrait)');
 
 const room = (params.get('room') || '').toUpperCase();
 const hasRoom = /^[A-Z2-9]{5}$/.test(room);
+const botCount = Number(params.get('bots'));
+const practice = !hasRoom && [1, 2, 3].includes(botCount) && isLevel(params.get('level')) ? { bots: botCount, level: params.get('level') } : null;
+const inGame = hasRoom || !!practice;
+// Online, other players are drawn in the past to hide the connection. Practice has no connection to hide, so what you see is what can hit you.
+const viewDelay = practice ? STEP_MS * 1.5 : VIEW_DELAY_MS;
 
 const held = new Set();
 const lastThrow = new Map();
@@ -289,7 +296,7 @@ function onSnapshot(s) {
   for (const f of s.x) {
     // Your own jumps were already shown the moment you pressed.
     if (f.id === myId && (f.k === 'jump' || f.k === 'jump2' || f.k === 'land')) continue;
-    fxQueue.push({ f, at: f.id === myId ? now : now + VIEW_DELAY_MS });
+    fxQueue.push({ f, at: f.id === myId ? now : now + viewDelay });
     if (f.k === 'ko' && s.p.length > 1) addFeed(f, s);
   }
 
@@ -364,6 +371,13 @@ function predictStep() {
 
 function runSteps() {
   const now = performance.now();
+  // Practice runs on this device, so it can wait for you: the menu or another app pauses it.
+  if (practice && (document.hidden || !$('menu').hidden)) {
+    lastTime = now;
+    stepClock = 0;
+    clockOffset = null;
+    return;
+  }
   stepClock += now - lastTime;
   lastTime = now;
   // A new press doesn't wait for the next regular step, so it shows on the very next frame.
@@ -372,6 +386,7 @@ function runSteps() {
   let steps = 0;
   while (stepClock >= STEP_MS && steps < 5) {
     predictStep();
+    ws?.tick?.();
     stepClock -= STEP_MS;
     steps++;
   }
@@ -528,7 +543,7 @@ function ownPosition(t) {
 }
 
 function drawMatch(now) {
-  const { a, b, mix } = viewAt((now - clockOffset - VIEW_DELAY_MS) / STEP_MS);
+  const { a, b, mix } = viewAt((now - clockOffset - viewDelay) / STEP_MS);
   errX *= 0.8;
   errY *= 0.8;
   if (Math.abs(errX) < 0.05) errX = 0;
@@ -632,7 +647,7 @@ function frame(now) {
   if (now - lastFrame < 14) return;
   const gap = now - lastFrame;
   lastFrame = now;
-  if (hasRoom) runSteps();
+  if (inGame) runSteps();
   else runAttract(now);
   updateScreen();
   if (upright.matches) return;
@@ -770,7 +785,7 @@ function setScreen(name) {
 }
 
 function updateScreen() {
-  if (!hasRoom) return setScreen('home');
+  if (!inGame) return setScreen('home');
   if (screen === 'lost') return;
   const last = snaps[snaps.length - 1];
   if (!last || !me) return setScreen('wait');
@@ -882,14 +897,16 @@ function updatePick(last) {
   $('lock').textContent = lockedOn === browsing ? 'Locked in' : lockedOn === null ? `Lock in ${HEROES[browsing].name}` : `Switch to ${HEROES[browsing].name}`;
   const waiting = last.p.filter((p) => !p.ready).map((p) => (p.id === myId ? 'you' : `P${p.id + 1}`));
   const alone = last.p.length < 2;
-  $('pick-note').textContent = alone
+  $('pick-note').textContent = practice
+    ? `${LEVELS[practice.level].label} practice against ${practice.bots} ${practice.bots === 1 ? 'bot' : 'bots'}. The round starts when you lock in.`
+    : alone
     ? 'You’re alone in this room. Pick a hero to practise, or invite someone first.'
     : !last.pk
       ? 'A round is on. Pick a hero to jump in.'
       : waiting.length
         ? `Waiting for ${waiting.join(', ')}. The round starts when the clock runs out.`
         : 'Everyone’s ready.';
-  $('pick-clock').hidden = alone || !last.pk;
+  $('pick-clock').hidden = alone || !last.pk || !!practice;
   $('pick-clock').textContent = clockSecs;
   $('pick-room').textContent = `Room ${room}`;
 }
@@ -903,7 +920,7 @@ function updateMapTab(last) {
     card.classList.toggle('picked', map === last.ch);
     card.disabled = !isHost;
   }
-  $('map-note').textContent = isHost ? 'You are the host. Random picks a new map every round.' : `Only the host (${last.h === null ? 'nobody yet' : nameOf(last.h)}) can change the map.`;
+  $('map-note').textContent = practice ? 'Random picks a new map every round.' : isHost ? 'You are the host. Random picks a new map every round.' : `Only the host (${last.h === null ? 'nobody yet' : nameOf(last.h)}) can change the map.`;
 }
 
 function setPickTab(tab) {
@@ -998,7 +1015,7 @@ function updateHud(last) {
     );
   }
   $('change-hero').hidden = last.p.length > 1;
-  const pingText = ping === null ? '' : `${Math.round(ping / 10) * 10} ms${lag ? ` (+${lag} each way)` : ''}`;
+  const pingText = ping === null || practice ? '' : `${Math.round(ping / 10) * 10} ms${lag ? ` (+${lag} each way)` : ''}`;
   if ($('ping').textContent !== pingText && last.k % 30 === 0) $('ping').textContent = pingText;
   if (me) {
     updateSkill(me);
@@ -1091,7 +1108,7 @@ function setMenu(open) {
 addEventListener('keydown', (e) => {
   unlockAudio();
   if (e.target.tagName === 'INPUT') return;
-  if (e.code === 'Escape' && hasRoom) return setMenu($('menu').hidden);
+  if (e.code === 'Escape' && inGame) return setMenu($('menu').hidden);
   if (screen === 'pick') {
     if (/^Digit\d$/.test(e.code)) return browse((Number(e.code[5]) + 9) % 10);
     if (e.code === 'Enter' && e.target.tagName !== 'BUTTON') return sendHero(browsing);
@@ -1320,7 +1337,63 @@ $('join').addEventListener('submit', (e) => {
   }
 });
 
-if (hasRoom) connect();
+// The practice setup on the home screen.
+let setupBots = 1;
+let setupLevel = 'easy';
+
+function setupTabs(box, options, chosen, choose) {
+  box.replaceChildren(
+    ...options.map(([value, label]) => {
+      const tab = button(
+        label,
+        () => {
+          for (const other of box.children) {
+            other.classList.toggle('on', other === tab);
+            other.setAttribute('aria-pressed', String(other === tab));
+          }
+          choose(value);
+        },
+        `tab${value === chosen ? ' on' : ''}`,
+      );
+      tab.setAttribute('aria-pressed', String(value === chosen));
+      return tab;
+    }),
+  );
+}
+
+function showSetup(open) {
+  $('home-start').hidden = open;
+  $('practice-setup').hidden = !open;
+}
+setupTabs($('bot-count'), [[1, '1'], [2, '2'], [3, '3']], setupBots, (n) => (setupBots = n));
+setupTabs(
+  $('bot-level'),
+  Object.entries(LEVELS).map(([name, l]) => [name, l.label]),
+  setupLevel,
+  (name) => {
+    setupLevel = name;
+    $('level-blurb').textContent = LEVELS[name].blurb;
+  },
+);
+$('level-blurb').textContent = LEVELS[setupLevel].blurb;
+$('practice-open').addEventListener('click', () => showSetup(true));
+$('practice-back').addEventListener('click', () => showSetup(false));
+$('practice-setup').addEventListener('submit', (e) => {
+  e.preventDefault();
+  params.set('bots', setupBots);
+  params.set('level', setupLevel);
+  location.search = params.toString();
+});
+
+if (practice) {
+  $('leave').textContent = 'Leave practice';
+  $('pick-leave').hidden = false;
+  $('pick-room').hidden = true;
+  $('menu-room').hidden = true;
+  for (const b of document.querySelectorAll('.copy-link')) b.hidden = true;
+  ws = createPractice(practice.bots, practice.level, onMessage);
+  onMessage({ t: 'hi', id: 0 });
+} else if (hasRoom) connect();
 
 // Frames drive the game; this only keeps a hidden tab connected, since browsers stop frames there.
 setInterval(() => {

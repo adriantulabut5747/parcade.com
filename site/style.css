@@ -1085,7 +1085,8 @@ body[data-screen='home'] #home,
 }
 
 /* Tabs: a sunken well, with the picked one a raised gold key. */
-#pick-tabs {
+#pick-tabs,
+.tabs {
   display: flex;
   gap: 4px;
   padding: 3px;
@@ -1362,7 +1363,7 @@ body:not([data-screen='play']) #feed {
 }
 
 .home-panel {
-  width: min(100%, 640px);
+  width: min(100%, 760px);
   display: flex;
   flex-direction: column;
   align-items: center;
@@ -1382,6 +1383,37 @@ body:not([data-screen='play']) #feed {
   line-height: 1;
   -webkit-text-stroke-width: 10px;
   text-shadow: 0 8px 0 var(--ink);
+}
+
+.home-start,
+#practice-setup {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+}
+
+.home-start[hidden],
+#practice-setup[hidden] {
+  display: none;
+}
+
+.setup-rows {
+  display: grid;
+  grid-template-columns: auto auto;
+  align-items: center;
+  gap: 6px 12px;
+}
+
+.setup-rows .tabs {
+  justify-self: start;
+}
+
+.setup-label {
+  font-size: 13.5px;
+  font-weight: 800;
+  text-align: right;
 }
 
 .tagline {
@@ -1981,6 +2013,19 @@ body:not([data-screen='play']) #feed {
   }
 
   .tagline {
+    font-size: 11.5px;
+  }
+
+  .home-start,
+  #practice-setup {
+    gap: 4px;
+  }
+
+  .setup-rows {
+    gap: 3px 10px;
+  }
+
+  .setup-label {
     font-size: 11.5px;
   }
 

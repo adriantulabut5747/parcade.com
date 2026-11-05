@@ -67,7 +67,7 @@
     <section id="menu" class="overlay" aria-label="Menu" hidden>
       <div class="menu-panel box">
         <h2 class="title menu-title">Menu</h2>
-        <div class="menu-room">
+        <div id="menu-room" class="menu-room">
           <span class="well room-chip">Room <b id="room-code"></b></span>
           <button class="key key-small copy-link" type="button">Copy invite link</button>
         </div>
@@ -80,7 +80,7 @@
         </div>
         <p id="hint">Move: A / D or arrows. Jump (twice): W, Up or Space. Drop down: S or Down. Shoot: J or X. Dash: K or C. Skill: L or V.</p>
         <div class="menu-actions">
-          <a class="key key-small" href="./">Leave room</a>
+          <a id="leave" class="key key-small" href="./">Leave room</a>
           <button id="menu-close" class="key key-gold" type="button">Back to the fight</button>
         </div>
       </div>
@@ -115,6 +115,7 @@
       <div class="pick-foot">
         <p id="pick-note"></p>
         <span id="pick-room" class="well room-chip"></span>
+        <a id="pick-leave" class="key key-small" href="./" hidden>Leave practice</a>
         <button class="key key-small copy-link" type="button">Copy invite link</button>
         <button class="key key-small controls-toggle" type="button"></button>
       </div>
@@ -129,9 +130,11 @@
     <section id="home" class="overlay" aria-label="Start a game">
       <h1 class="title logo">Parcade</h1>
       <div class="home-panel box">
+        <div id="home-start" class="home-start">
         <p class="tagline">Knock everyone off the platforms. 16 heroes, 3 maps, up to 4 players, 3 lives each.</p>
         <div class="home-row">
           <button id="create" class="key key-gold key-big" type="button">Create room</button>
+          <button id="practice-open" class="key key-big" type="button">Practice</button>
         <form id="join">
           <label for="join-code">Got a code?</label>
           <span class="well join-well">
@@ -141,6 +144,20 @@
         </form>
         </div>
         <p id="join-error" role="alert"></p>
+        </div>
+        <form id="practice-setup" hidden>
+          <div class="setup-rows">
+            <span class="setup-label" id="bot-count-label">Bots</span>
+            <div id="bot-count" class="well tabs" role="group" aria-labelledby="bot-count-label"></div>
+            <span class="setup-label" id="bot-level-label">Difficulty</span>
+            <div id="bot-level" class="well tabs" role="group" aria-labelledby="bot-level-label"></div>
+          </div>
+          <p id="level-blurb" class="tagline"></p>
+          <div class="home-row">
+            <button id="practice-back" class="key" type="button">Back</button>
+            <button class="key key-gold key-big" type="submit">Start practice</button>
+          </div>
+        </form>
       </div>
     </section>
 

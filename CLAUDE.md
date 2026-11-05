@@ -29,7 +29,10 @@ The network is set to Public in Windows. Adrian's phone has reached the game, so
 | `site/audio.js` | All sounds, synthesised. No audio files |
 | `site/style.css`, `site/index.html` | Interface |
 | `worker/worker.js` | Cloudflare Durable Object: one per room, runs the match |
+| `site/bot.js` | Practice bots' brain and the 4 levels in `LEVELS`. Bots only press keys, under the same rules as players |
+| `site/practice.js` | A room that runs in the page and looks like a connection to `client.js`, so practice needs no server |
 | `sim-test.mjs` | Rules test: `node sim-test.mjs`. Add a check for every new rule |
+| `bot-test.mjs` | Bot test, seeded: `node bot-test.mjs` (add `report` for the numbers). Takes about 2 minutes |
 | `browser-tests/` | Real-browser tests, see below |
 
 ## Rules Adrian set
@@ -53,6 +56,7 @@ The network is set to Public in Windows. Adrian's phone has reached the game, so
 - **Tether's look:** Adrian asked for red and blue from a Spider-Man picture, "not Spider-Man". It stays an original suit: blue hood and plated mask with eight small eyes, red legs and harness, no white eye patches, no web pattern on the suit. Keep those differences.
 - **Skill looks:** `skillShowing` in `client.js` decides when a hero's picture changes, and each body in `heroes.js` reads `o.skin`. Illusionist's copies lose the hat too, or the real one would be obvious. Handler's dog itself must not change.
 - **Pick screen:** the title, tabs, detail box and footer must not move between heroes or tabs. `--pick-h` sets the fixed height; raise it if a longer hero text ever clips.
+- **Practice (Nov 5):** Practice on the home screen, 1-3 bots, one difficulty for all of them, on the 3 normal maps. Each round gives bots random heroes, never two the same. Adrian's calls: same rules at every level, no stat cheats even on Very hard. Medium and up dodge shots and skills by jumping. Hard and up block and counter with skills. Very hard also learns your habits (`newWatcher`). It lives at `?bots=N&level=name`, runs in the browser, and the menu or leaving the app pauses it.
 - **Shots against walls and dogs** use `dmg` in `GUNS`: a shotgun pellet is 0.4, a minigun bullet 0.5, a flame 0.1, the rest 1.
 
 ## Keeping it fast
@@ -83,6 +87,7 @@ node browser-tests/perf.mjs E:/claude-tmp/shots 6
 - `perf`: frame cost in a 4-player fight with bots.
 - `heroes-test`: all 16 skills, the new skills against a second real player, the K and L keys, the title screen, the map tab, each map, and a whole round to the results screen.
 - `sound-and-burst-test`: every sound's loudness, fullscreen click, server input burst.
+- `practice-test`: the setup screen, a whole round against 3 very hard bots, pausing, and frame cost at 6x slowdown. Needs only the page server, not the room server.
 
 Gotchas:
 
@@ -104,4 +109,5 @@ Gotchas:
 - **Balance to test with Adrian:** Ninja may be too strong. Blindness may be harsh at 3 s. Shifter may be too safe. Slower movement, smaller platforms and more knockback together may end rounds too fast. Two dog shoves can knock a player who stands still off the floor. Angler's whole-map hook with a 0.8 s stun is nearly always a kill from a ledge; Adrian chose this over my stun-break suggestion, so watch it.
 - **Placeholder names:** hero and skill names are mine until Adrian names them. New on Nov 4: Bulwark (was Gale), Illusionist (his "Illusioner" is a Minecraft mob's name), Poacher, Angler, Handler, Mossback, Rime, Tether, Shade, plus Greenwood and Sun Steps.
 - **Music:** two original pieces in `SONGS` in `audio.js`, written Nov 4, with their own menu toggle: a 53 s procession for the menus and a 44 s battle piece. Levels and notes were checked by meter and spectrogram, but nobody has judged how they sound yet.
+- **Bots, not yet played by a person.** Measured bot against bot with random heroes, each level beats the one below about 74% (Very hard over Hard 185/250, Hard over Medium 109/150), Very hard over Medium about 80%, Medium over Easy 98%. Share of far pistol shots that land: Easy 64%, Medium about 25%, Hard 5-10%, Very hard under 1%. These numbers say the levels are ordered, not that they feel right, so tune `LEVELS` once Adrian has played. Three very hard bots may be close to unbeatable on a phone; he was told and chose no cheats. My calls he hasn't confirmed: bots fight each other too and prefer him (`focus`), and the round ends as soon as he is out, with the bot on the most lives taking it. At 6x CPU slowdown 3 very hard bots held 60 fps with one 183 ms frame in 12 s, cause not looked into; not checked on a real phone.
 - **Clone and trap details not confirmed by Adrian:** enemies see traps at 60% opacity. Clones can't pick up crates or set off traps.
